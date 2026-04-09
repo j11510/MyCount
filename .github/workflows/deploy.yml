@@ -1,0 +1,32 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/MyCount
+            git pull origin main
+            
+            # Create .env file from secrets
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > backend/.env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> backend/.env
+            echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > frontend/.env.local
+            
+            # Restart containers
+            docker compose down
+            docker compose up -d --build

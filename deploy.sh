@@ -11,8 +11,13 @@ echo "[1/4] Pulling latest code from GitHub..."
 git pull origin main
 
 # 2. 백엔드 업데이트
-echo "[2/4] Updating Backend dependencies..."
+echo "[2/4] Updating Backend dependencies (using Virtual Env)..."
 cd backend
+# 가상환경 생성 및 활성화
+if [ ! -d "venv" ]; then
+  python3 -m venv venv
+fi
+source venv/bin/activate
 python3 -m pip install -r requirements.txt
 # .env 파일이 없다면 생성 (필요 시 수정)
 if [ ! -f .env ]; then
@@ -36,7 +41,7 @@ cd ..
 # 4. PM2를 통한 프로세스 재시작
 echo "[4/4] Restarting services with PM2..."
 pm2 restart all || (
-  pm2 start "python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend
+  pm2 start "./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend
   pm2 start "npm run start" --name mycount-frontend
 )
 

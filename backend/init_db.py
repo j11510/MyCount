@@ -7,8 +7,8 @@ def init():
         db = SessionLocal()
         admin = crud.get_admin_by_username(db, "admin")
         if not admin:
-            crud.create_admin(db, schemas.AdminCreate(username="admin", password="admin123"))
-            print("Successfully created default admin: admin / admin123")
+            crud.create_admin(db, schemas.AdminCreate(username="admin", password="admin1234"))
+            print("Successfully created default admin: admin / admin1234")
         else:
             print("Admin already exists.")
         db.close()

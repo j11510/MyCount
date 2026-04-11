@@ -90,3 +90,10 @@ def update_monthly_item(db: Session, item_id: int, amount: int):
         db.commit()
         db.refresh(db_item)
     return db_item
+
+def delete_monthly_record(db: Session, record_id: int):
+    db_record = db.query(models.MonthlyRecord).filter(models.MonthlyRecord.id == record_id).first()
+    if db_record:
+        db.delete(db_record)
+        db.commit()
+    return db_record

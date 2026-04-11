@@ -124,11 +124,12 @@ export default function MonthDetail() {
       ["[2] 고정 지출 상세 (자동 등록)", "", ""],
       ["구분", "내역명", "금액"],
       ...fixedExpenses.map(item => ["고정지출", item.name, item.amount]),
+      ["합계", "총 자동 고정 지출", totalActualFixed],
       ["", "", ""],
       ["[3] 변동 지출 상세 (추가 입력)", "", ""],
       ["구분", "내역명", "금액"],
       ...variableExpenses.map(item => ["변동지출", item.name, item.amount]),
-      ["합계", "총 변동 지출 규모", totalVariable],
+      ["합계", "총 추가 변동 지출", totalVariable],
       ["", "", ""],
       ["[4] 추가 수입 상세", "", ""],
       ["구분", "내역명", "금액"],
@@ -160,11 +161,12 @@ export default function MonthDetail() {
 
   // 총 마이너스 고정금액 3,500만원 고정
   const totalFixed = 35000000;
+  const totalActualFixed = fixedExpenses.reduce((acc, curr) => acc + curr.amount, 0);
   const totalVariable = variableExpenses.reduce((acc, curr) => acc + curr.amount, 0);
   const totalIncomes = incomes.reduce((acc, curr) => acc + curr.amount, 0);
 
   const baseShortfall = totalFixed - currentBalance;
-  const balanceAfterExpenses = baseShortfall - totalVariable;
+  const balanceAfterExpenses = baseShortfall - (totalActualFixed + totalVariable);
   const finalNeeded = balanceAfterExpenses + totalIncomes;
 
   return (
@@ -254,6 +256,12 @@ export default function MonthDetail() {
                  </div>
                ))}
                {fixedExpenses.length === 0 && <p className="text-sm text-gray-500 bg-black/20 p-4 rounded-xl border border-white/5">자동으로 등록된 내역이 없습니다.</p>}
+               {fixedExpenses.length > 0 && (
+                 <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center text-sm p-2 bg-white/5 rounded-xl">
+                   <span className="font-bold text-gray-400 text-[11px]">총 자동 고정 지출 합계</span>
+                   <span className="font-mono font-bold text-white text-lg">₩{totalActualFixed.toLocaleString()}</span>
+                 </div>
+               )}
              </div>
           </div>
 
@@ -338,7 +346,7 @@ export default function MonthDetail() {
                   ₩{balanceAfterExpenses.toLocaleString()}
                 </span>
                 <p className="text-[10px] text-gray-500 mt-2 leading-snug">
-                  남은금액 - 총 변동 지출 규모
+                  3. 남은금액 - (자동 고정 지출 + 추가 변동 지출)
                 </p>
               </div>
 

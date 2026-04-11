@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Calendar, ArrowRight } from "lucide-react";
+import { Plus, Calendar, ArrowRight, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 
@@ -33,6 +33,20 @@ export default function AdminDashboard() {
       fetchRecords();
     } catch (e: any) {
       alert(e.response?.data?.detail || "기록 생성 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: number, year: number, month: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm(`${year}년 ${month}월 기록을 삭제하시겠습니까?`)) {
+      try {
+        await api.delete(`/monthly-records/${id}`);
+        fetchRecords();
+      } catch (e) {
+        console.error(e);
+        alert("기록 삭제 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -70,6 +84,13 @@ export default function AdminDashboard() {
                 <span className="text-xs tracking-wider text-gray-500 font-bold">현재 입력된 잔고액</span>
                 <span className="text-lg font-medium text-purple-100 tracking-wide">₩{record.current_balance.toLocaleString()}</span>
               </div>
+              <button
+                onClick={(e) => handleDelete(e, record.id, record.year, record.month)}
+                className="absolute bottom-4 right-4 p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all z-20"
+                title="삭제"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </Link>
         ))}

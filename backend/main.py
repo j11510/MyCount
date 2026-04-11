@@ -70,6 +70,11 @@ def read_monthly_record(record_id: int, db: Session = Depends(get_db)):
 def update_balance(record_id: int, current_balance: int, db: Session = Depends(get_db)):
     return crud.update_monthly_record_balance(db, record_id, current_balance)
 
+@app.delete("/monthly-records/{record_id}")
+def delete_monthly_record(record_id: int, db: Session = Depends(get_db)):
+    crud.delete_monthly_record(db, record_id)
+    return {"status": "deleted"}
+
 @app.post("/monthly-records/{record_id}/items", response_model=schemas.MonthlyItemResponse)
 def create_item_for_record(record_id: int, item: schemas.MonthlyItemCreate, db: Session = Depends(get_db)):
     return crud.create_monthly_item(db=db, record_id=record_id, item=item)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Tag } from "lucide-react";
-import api from "@/lib/api";
+import api from "../../../lib/api";
 import { motion } from "framer-motion";
 
 export default function FixedExpensesPage() {

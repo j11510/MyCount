@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import api from "@/lib/api";
+import api from "../../../../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
 import { Plus, Trash2, ArrowLeft, Target, DollarSign, TrendingUp, TrendingDown, Download } from "lucide-react";

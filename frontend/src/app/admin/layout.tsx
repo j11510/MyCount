@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Receipt, LogOut, Users, Shield, Settings, BookOpen, BarChart3, Heart } from "lucide-react";
-import { logout } from "@/lib/api";
-import api from "@/lib/api";
+import { logout } from "../../lib/api";
+import api from "../../lib/api";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Users, Plus, Trash2, Shield, User as UserIcon } from "lucide-react";
-import api from "@/lib/api";
+import api from "../../../lib/api";
 import { motion } from "framer-motion";
 
 export default function UserManagement() {

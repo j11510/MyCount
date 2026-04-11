@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Heart, Plus, Trash2, Download, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react";
-import api from "@/lib/api";
+import api from "../../../lib/api";
 import { motion } from "framer-motion";
 
 export default function DonationManagement() {

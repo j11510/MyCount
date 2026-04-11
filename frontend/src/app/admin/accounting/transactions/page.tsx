@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BookOpen, Plus, Trash2, Calendar, CreditCard, ChevronLeft, ChevronRight, ArrowUpCircle, ArrowDownCircle, Edit3, Save, X } from "lucide-react";
-import api from "@/lib/api";
+import api from "../../../../lib/api";
 import { motion } from "framer-motion";
 
 const ACCOUNTS = [

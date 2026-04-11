@@ -61,3 +61,61 @@ class MonthlyRecordResponse(MonthlyRecordBase):
     items: List[MonthlyItemResponse] = []
     class Config:
         from_attributes = True
+
+from datetime import date, datetime
+
+class AccountingCategoryBase(BaseModel):
+    name: str
+    type: Optional[str] = "general" # Now optional
+
+class AccountingCategoryCreate(AccountingCategoryBase):
+    pass
+
+class AccountingCategoryResponse(AccountingCategoryBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class AccountingRecordBase(BaseModel):
+    bank_account: str
+    category_id: int
+    description: str
+    amount: int
+    type: str # Added type
+    date: date
+
+class AccountingRecordCreate(AccountingRecordBase):
+    pass
+
+class AccountingRecordResponse(AccountingRecordBase):
+    id: int
+    category: Optional[AccountingCategoryResponse] = None
+    class Config:
+        from_attributes = True
+
+class AccountingAccountBase(BaseModel):
+    code: str
+    display_name: str
+    balance: int
+
+class AccountingAccountCreate(AccountingAccountBase):
+    pass
+
+class AccountingAccountResponse(AccountingAccountBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class DonationRecordBase(BaseModel):
+    member_name: str
+    amount: int
+    date: date
+
+class DonationRecordCreate(DonationRecordBase):
+    pass
+
+class DonationRecordResponse(DonationRecordBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True

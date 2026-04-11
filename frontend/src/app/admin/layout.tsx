@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, LogOut, Users, Shield } from "lucide-react";
+import { LayoutDashboard, Receipt, LogOut, Users, Shield, Settings, BookOpen, BarChart3, Heart } from "lucide-react";
 import { logout } from "@/lib/api";
 import api from "@/lib/api";
 
@@ -22,6 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setRole(res.data.role);
     } catch (e) {
       console.error("Failed to fetch user:", e);
+      window.location.href = "/login";
     }
   };
 
@@ -41,6 +42,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       { name: "월별 기록 목록", href: "/admin", icon: LayoutDashboard },
       { name: "고정 지출 관리", href: "/admin/fixed-expenses", icon: Receipt },
       { name: "사용자 관리", href: "/admin/users", icon: Users }
+    );
+  }
+
+  if (role === "admin" || role === "manager") {
+    navs.push(
+      { name: "회계 카테고리", href: "/admin/accounting/categories", icon: Settings },
+      { name: "회계 장부 관리", href: "/admin/accounting/transactions", icon: BookOpen },
+      { name: "회계 통계", href: "/admin/accounting/stats", icon: BarChart3 },
+      { name: "헌금 관리", href: "/admin/donations", icon: Heart }
     );
   }
 
@@ -90,7 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
       <main className="flex-1 glass-panel rounded-2xl p-6 shadow-xl border border-white/10 bg-black/40 overflow-x-hidden relative">
-        {role === "admin" ? (
+        {(role === "admin" || (role === "manager" && (pathname.startsWith("/admin/accounting") || pathname.startsWith("/admin/donations")))) ? (
           children
         ) : role !== null ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-10">

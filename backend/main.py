@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import timedelta
-from typing import List
+from typing import List, Optional
 
 import models, schemas, crud, auth
 from database import engine, get_db
@@ -110,3 +110,108 @@ def update_item_amount(item_id: int, amount: int, db: Session = Depends(get_db),
 def delete_item(item_id: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_admin)):
     crud.delete_monthly_item(db=db, item_id=item_id)
     return {"status": "deleted"}
+
+# Accounting Modules
+@app.get("/accounting/categories", response_model=List[schemas.AccountingCategoryResponse])
+def read_accounting_categories(type: Optional[str] = None, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.get_accounting_categories(db, type=type)
+
+@app.post("/accounting/categories", response_model=schemas.AccountingCategoryResponse)
+def create_accounting_category(category: schemas.AccountingCategoryCreate, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.create_accounting_category(db, category)
+
+@app.delete("/accounting/categories/{category_id}")
+def delete_accounting_category(category_id: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    crud.delete_accounting_category(db, category_id)
+    return {"status": "deleted"}
+
+@app.get("/accounting/transactions/{bank_account}", response_model=List[schemas.AccountingRecordResponse])
+def read_accounting_transactions(bank_account: str, year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.get_accounting_records(db, bank_account, year, month)
+
+@app.post("/accounting/transactions", response_model=schemas.AccountingRecordResponse)
+def create_accounting_transaction(record: schemas.AccountingRecordCreate, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.create_accounting_record(db, record)
+
+@app.delete("/accounting/transactions/{record_id}")
+def delete_accounting_transaction(record_id: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    crud.delete_accounting_record(db, record_id)
+    return {"status": "deleted"}
+
+@app.get("/accounting/stats")
+def read_accounting_stats(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    stats = crud.get_accounting_stats(db, year, month)
+    result = []
+    for s in stats:
+        result.append({
+            "bank_account": s[0],
+            "category_name": s[1],
+            "type": s[2],
+            "amount": s[3]
+        })
+    return result
+
+@app.get("/accounting/accounts", response_model=List[schemas.AccountingAccountResponse])
+def read_accounting_accounts(db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.get_accounting_accounts(db)
+
+@app.put("/accounting/accounts/{code}/balance", response_model=schemas.AccountingAccountResponse)
+def update_account_balance(code: str, balance: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.update_accounting_account_balance(db, code, balance)
+@app.get("/donations", response_model=List[schemas.DonationRecordResponse])
+def read_donations(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.get_donation_records(db, year, month)
+
+@app.post("/donations", response_model=schemas.DonationRecordResponse)
+def create_donation(record: schemas.DonationRecordCreate, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.create_donation_record(db, record)
+
+@app.delete("/donations/{record_id}")
+def delete_donation(record_id: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.delete_donation_record(db, record_id)
+
+@app.get("/donations/export")
+def export_donations(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    import pandas as pd
+    from io import BytesIO
+    from fastapi.responses import StreamingResponse
+    
+    records = crud.get_donation_records(db, year, month)
+    data = []
+    total = 0
+    # Grouping for Excel
+    current_date = None
+    day_total = 0
+    for r in records:
+        # If date changed, append subtotal for previous date
+        if current_date and r.date != current_date:
+            data.append({"날짜": f"{current_date} 소계", "성함": "-", "금액": day_total})
+            day_total = 0
+        
+        data.append({
+            "날짜": r.date,
+            "성함": r.member_name,
+            "금액": r.amount
+        })
+        current_date = r.date
+        day_total += r.amount
+        total += r.amount
+    
+    # Append last date subtotal
+    if current_date:
+        data.append({"날짜": f"{current_date} 소계", "성함": "-", "금액": day_total})
+        
+    if data:
+        data.append({"날짜": "월 합계", "성함": "", "금액": total})
+
+        
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='헌금내역')
+    output.seek(0)
+    
+    headers = {
+        'Content-Disposition': f'attachment; filename="donation_{year}_{month}.xlsx"'
+    }
+    return StreamingResponse(output, headers=headers, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

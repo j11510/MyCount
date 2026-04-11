@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import Optional
 import models, schemas
 from passlib.context import CryptContext
 
@@ -111,3 +112,118 @@ def delete_monthly_record(db: Session, record_id: int):
         db.delete(db_record)
         db.commit()
     return db_record
+
+# Accounting Category CRUD
+def get_accounting_categories(db: Session, type: Optional[str] = None):
+    query = db.query(models.AccountingCategory)
+    if type:
+        query = query.filter(models.AccountingCategory.type == type)
+    return query.all()
+
+def create_accounting_category(db: Session, category: schemas.AccountingCategoryCreate):
+    db_category = models.AccountingCategory(**category.dict())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+def delete_accounting_category(db: Session, category_id: int):
+    db_category = db.query(models.AccountingCategory).filter(models.AccountingCategory.id == category_id).first()
+    if db_category:
+        db.delete(db_category)
+        db.commit()
+    return db_category
+
+# Accounting Record CRUD
+def get_accounting_records(db: Session, bank_account: str, year: int, month: int):
+    from sqlalchemy import extract
+    return db.query(models.AccountingRecord).filter(
+        models.AccountingRecord.bank_account == bank_account,
+        extract('year', models.AccountingRecord.date) == year,
+        extract('month', models.AccountingRecord.date) == month
+    ).order_by(models.AccountingRecord.date.desc()).all()
+
+def create_accounting_record(db: Session, record: schemas.AccountingRecordCreate):
+    db_record = models.AccountingRecord(**record.dict())
+    db.add(db_record)
+    
+    # Update account balance using the record type
+    db_account = db.query(models.AccountingAccount).filter(models.AccountingAccount.code == record.bank_account).first()
+    if db_account:
+        if record.type == "income":
+            db_account.balance += record.amount
+        else:
+            db_account.balance -= record.amount
+                
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
+def delete_accounting_record(db: Session, record_id: int):
+    db_record = db.query(models.AccountingRecord).filter(models.AccountingRecord.id == record_id).first()
+    if db_record:
+        # Revert account balance using the record type
+        db_account = db.query(models.AccountingAccount).filter(models.AccountingAccount.code == db_record.bank_account).first()
+        if db_account:
+            if db_record.type == "income":
+                db_account.balance -= db_record.amount
+            else:
+                db_account.balance += db_record.amount
+        
+        db.delete(db_record)
+        db.commit()
+    return db_record
+
+# Accounting Account CRUD
+def get_accounting_accounts(db: Session):
+    return db.query(models.AccountingAccount).all()
+
+def get_accounting_account_by_code(db: Session, code: str):
+    return db.query(models.AccountingAccount).filter(models.AccountingAccount.code == code).first()
+
+def update_accounting_account_balance(db: Session, code: str, new_balance: int):
+    db_account = db.query(models.AccountingAccount).filter(models.AccountingAccount.code == code).first()
+    if db_account:
+        db_account.balance = new_balance
+        db.commit()
+        db.refresh(db_account)
+    return db_account
+
+def get_accounting_stats(db: Session, year: int, month: int):
+    from sqlalchemy import func, extract
+    return db.query(
+        models.AccountingRecord.bank_account,
+        models.AccountingCategory.name,
+        models.AccountingCategory.type,
+        func.sum(models.AccountingRecord.amount).label("total_amount")
+    ).join(models.AccountingCategory).filter(
+        extract('year', models.AccountingRecord.date) == year,
+        extract('month', models.AccountingRecord.date) == month
+    ).group_by(
+        models.AccountingRecord.bank_account,
+        models.AccountingCategory.name,
+        models.AccountingCategory.type
+    ).all()
+
+# Donation Record CRUD
+def get_donation_records(db: Session, year: int, month: int):
+    from sqlalchemy import extract
+    return db.query(models.DonationRecord).filter(
+        extract('year', models.DonationRecord.date) == year,
+        extract('month', models.DonationRecord.date) == month
+    ).order_by(models.DonationRecord.date.desc()).all()
+
+def create_donation_record(db: Session, record: schemas.DonationRecordCreate):
+    db_record = models.DonationRecord(**record.model_dump())
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+    return db_record
+
+def delete_donation_record(db: Session, record_id: int):
+    db_record = db.query(models.DonationRecord).filter(models.DonationRecord.id == record_id).first()
+    if db_record:
+        db.delete(db_record)
+        db.commit()
+    return db_record
+

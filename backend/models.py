@@ -1,4 +1,5 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, DateTime
+from datetime import datetime
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -35,3 +36,36 @@ class MonthlyItem(Base):
     is_imported_fixed = Column(Boolean, default=False)
     
     record = relationship("MonthlyRecord", back_populates="items")
+
+class AccountingCategory(Base):
+    __tablename__ = "accounting_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), index=True)
+    type = Column(String(20)) # "income", "expense"
+
+class AccountingRecord(Base):
+    __tablename__ = "accounting_records"
+    id = Column(Integer, primary_key=True, index=True)
+    bank_account = Column(String(50), index=True) # "finances", "donations", "meeting"
+    category_id = Column(Integer, ForeignKey("accounting_categories.id"))
+    description = Column(String(255))
+    amount = Column(Integer, default=0)
+    type = Column(String(20)) # "income", "expense" - MOVED HERE
+    date = Column(Date, index=True)
+    
+    category = relationship("AccountingCategory")
+
+class AccountingAccount(Base):
+    __tablename__ = "accounting_accounts"
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, index=True) # "finances", "donations", "meeting"
+    display_name = Column(String(100))
+    balance = Column(Integer, default=0)
+
+class DonationRecord(Base):
+    __tablename__ = "donation_records"
+    id = Column(Integer, primary_key=True, index=True)
+    member_name = Column(String(100), index=True)
+    amount = Column(Integer, default=0)
+    date = Column(Date, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

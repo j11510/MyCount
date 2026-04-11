@@ -10,6 +10,10 @@ echo "=========================================="
 echo "[1/4] Pulling latest code from GitHub..."
 git pull origin main
 
+# 태블릿 IP 자동 감지
+TABLET_IP=$(hostname -I | awk '{print $1}')
+echo "Detected Tablet IP: $TABLET_IP"
+
 # 2. 백엔드 업데이트
 echo "[2/4] Updating Backend dependencies (using Virtual Env)..."
 cd backend
@@ -24,7 +28,7 @@ python3 -m pip install -r requirements.txt
 # 이전 로직: echo "DATABASE_URL=mysql+pymysql://root:yourpassword@192.168.1.113:3306/chdb?charset=utf8mb4" > .env
 # 변경 내용: DB 접속 주소를 127.0.0.1로 변경 (같은 우분투 내부에 있으므로 로컬 접속이 더 안정적입니다)
 if [ ! -f .env ]; then
-  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@127.0.0.1:3306/chdb?charset=utf8mb4" > .env
+  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@$TABLET_IP:3306/chdb?charset=utf8mb4" > .env
   echo "SECRET_KEY=your_secret_key" >> .env
   echo ".env 파일이 생성되었습니다. 정보를 올바르게 수정해 주세요."
 fi
@@ -39,8 +43,6 @@ npm install
 # 이전 로직: echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 # 변경 내용: 브라우저에서 백엔드로 직접 요청을 보내야 하므로, localhost 대신 '태블릿의 실제 IP'를 사용하는 것이 좋습니다.
 if [ ! -f .env.local ]; then
-  # 태블릿의 IP를 자동으로 가져와서 설정에 넣습니다.
-  TABLET_IP=$(hostname -I | awk '{print $1}')
   echo "NEXT_PUBLIC_API_URL=http://$TABLET_IP:8000" > .env.local
   echo ".env.local에 API 주소($TABLET_IP)가 설정되었습니다."
 fi

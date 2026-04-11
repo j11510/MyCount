@@ -19,9 +19,12 @@ if [ ! -d "venv" ]; then
 fi
 source venv/bin/activate
 python3 -m pip install -r requirements.txt
-# .env 파일이 없다면 생성 (필요 시 수정)
+
+# .env 파일 설정 수정
+# 이전 로직: echo "DATABASE_URL=mysql+pymysql://root:yourpassword@192.168.1.113:3306/chdb?charset=utf8mb4" > .env
+# 변경 내용: DB 접속 주소를 127.0.0.1로 변경 (같은 우분투 내부에 있으므로 로컬 접속이 더 안정적입니다)
 if [ ! -f .env ]; then
-  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@192.168.1.113:3306/chdb?charset=utf8mb4" > .env
+  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@127.0.0.1:3306/chdb?charset=utf8mb4" > .env
   echo "SECRET_KEY=your_secret_key" >> .env
   echo ".env 파일이 생성되었습니다. 정보를 올바르게 수정해 주세요."
 fi
@@ -31,22 +34,38 @@ cd ..
 echo "[3/4] Building Frontend (This may take a while)..."
 cd frontend
 npm install
-# .env.local 설정
+
+# .env.local 설정 수정
+# 이전 로직: echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+# 변경 내용: 브라우저에서 백엔드로 직접 요청을 보내야 하므로, localhost 대신 '태블릿의 실제 IP'를 사용하는 것이 좋습니다.
 if [ ! -f .env.local ]; then
-  echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+  # 태블릿의 IP를 자동으로 가져와서 설정에 넣습니다.
+  TABLET_IP=$(hostname -I | awk '{print $1}')
+  echo "NEXT_PUBLIC_API_URL=http://$TABLET_IP:8000" > .env.local
+  echo ".env.local에 API 주소($TABLET_IP)가 설정되었습니다."
 fi
+
 npm run build
 cd ..
 
 # 4. PM2를 통한 프로세스 재시작
 echo "[4/4] Restarting services with PM2..."
 pm2 delete all 2>/dev/null
+
+# 백엔드 실행: --host 0.0.0.0 확인됨 (정상)
 pm2 start "venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend --cwd backend
-pm2 start "npm run start -- --port 3000" --name mycount-frontend --cwd frontend
+
+# 프론트엔드 실행 수정
+# 이전 로직: pm2 start "npm run start -- --port 3000" --name mycount-frontend --cwd frontend
+# 변경 내용: 외부 접속을 위해 --host 0.0.0.0 옵션을 추가합니다.
+pm2 start "npm run start -- --port 3000 --hostname 0.0.0.0" --name mycount-frontend --cwd frontend
+
 pm2 save
 
+# 출력 메시지 수정: localhost 대신 실제 접근 가능한 IP 안내
+CURRENT_IP=$(hostname -I | awk '{print $1}')
 echo "=========================================="
 echo " Deployment Complete!"
-echo " Backend: http://localhost:8000"
-echo " Frontend: http://localhost:3000"
+echo " Backend (API): http://$CURRENT_IP:8000"
+echo " Frontend (UI): http://$CURRENT_IP:3000"
 echo "=========================================="

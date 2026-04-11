@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { BarChart3, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PieChart, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import api from "../../../../lib/api";
+import api from "@/lib/api";
+
 import { motion } from "framer-motion";
 
 const ACCOUNT_LABELS: Record<string, string> = {

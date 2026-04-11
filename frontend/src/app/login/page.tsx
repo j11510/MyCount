@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import api from "../../lib/api";
+import api from "@/lib/api";
+
 
 export default function LoginPage() {
   const router = useRouter();

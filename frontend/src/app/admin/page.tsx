@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Calendar, ArrowRight, Trash2 } from "lucide-react";
-import api from "../../lib/api";
+import api from "@/lib/api";
+
 import { motion } from "framer-motion";
 
 export default function AdminDashboard() {

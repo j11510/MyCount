@@ -40,10 +40,10 @@ cd ..
 
 # 4. PM2를 통한 프로세스 재시작
 echo "[4/4] Restarting services with PM2..."
-pm2 restart all || (
-  pm2 start "./venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend
-  pm2 start "npm run start" --name mycount-frontend
-)
+pm2 delete all 2>/dev/null
+pm2 start "venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend --cwd backend
+pm2 start "npm run start -- --port 3000" --name mycount-frontend --cwd frontend
+pm2 save
 
 echo "=========================================="
 echo " Deployment Complete!"

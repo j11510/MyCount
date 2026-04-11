@@ -9,10 +9,24 @@ def get_admin_by_username(db: Session, username: str):
 
 def create_admin(db: Session, admin: schemas.AdminCreate):
     hashed_password = pwd_context.hash(admin.password)
-    db_admin = models.Admin(username=admin.username, hashed_password=hashed_password)
+    db_admin = models.Admin(
+        username=admin.username, 
+        hashed_password=hashed_password,
+        role=admin.role
+    )
     db.add(db_admin)
     db.commit()
     db.refresh(db_admin)
+    return db_admin
+
+def get_admins(db: Session):
+    return db.query(models.Admin).all()
+
+def delete_admin(db: Session, admin_id: int):
+    db_admin = db.query(models.Admin).filter(models.Admin.id == admin_id).first()
+    if db_admin:
+        db.delete(db_admin)
+        db.commit()
     return db_admin
 
 def get_fixed_expenses(db: Session, skip: int = 0, limit: int = 100):

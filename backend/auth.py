@@ -40,7 +40,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -53,7 +53,23 @@ def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    admin = db.query(models.Admin).filter(models.Admin.username == username).first()
-    if admin is None:
+    user = db.query(models.Admin).filter(models.Admin.username == username).first()
+    if user is None:
         raise credentials_exception
-    return admin
+    return user
+
+def check_admin(user: models.Admin = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return user
+
+def check_manager(user: models.Admin = Depends(get_current_user)):
+    if user.role not in ["admin", "manager"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager or Admin privileges required"
+        )
+    return user

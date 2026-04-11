@@ -7,6 +7,7 @@ class Admin(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True)
     hashed_password = Column(String(255))
+    role = Column(String(20), default="user") # "admin", "manager", "user"
 
 class FixedExpense(Base):
     __tablename__ = "fixed_expenses"

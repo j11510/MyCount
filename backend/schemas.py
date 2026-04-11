@@ -10,6 +10,7 @@ class TokenData(BaseModel):
 
 class AdminBase(BaseModel):
     username: str
+    role: str = "user"
 
 class AdminCreate(AdminBase):
     password: str

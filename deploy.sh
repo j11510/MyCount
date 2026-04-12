@@ -16,11 +16,17 @@ echo "Detected Tablet IP: $TABLET_IP"
 
 # 1.5 DB 서비스 확인 (Termux proot 호환성)
 echo "[1.5/4] Checking MariaDB service..."
-if service mysql status > /dev/null 2>&1; then
-  echo "MariaDB is already running."
+# 서비스 명칭 후보군 (mysql, mariadb)
+DB_SERVICE="mysql"
+if ! service $DB_SERVICE status > /dev/null 2>&1; then
+  DB_SERVICE="mariadb"
+fi
+
+if service $DB_SERVICE status > /dev/null 2>&1; then
+  echo "MariaDB ($DB_SERVICE) is already running."
 else
-  echo "Starting MariaDB service..."
-  service mysql start || echo "Warning: Could not start MariaDB automatically. Please run 'service mysql start' manually."
+  echo "Starting MariaDB ($DB_SERVICE) service..."
+  service $DB_SERVICE start || echo "Warning: Could not start MariaDB automatically. Please run 'service $DB_SERVICE start' manually."
 fi
 
 # 2. 백엔드 업데이트

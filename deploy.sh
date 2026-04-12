@@ -14,6 +14,15 @@ git pull origin main
 TABLET_IP=$(hostname -I | awk '{print $1}')
 echo "Detected Tablet IP: $TABLET_IP"
 
+# 1.5 DB 서비스 확인 (Termux proot 호환성)
+echo "[1.5/4] Checking MariaDB service..."
+if service mysql status > /dev/null 2>&1; then
+  echo "MariaDB is already running."
+else
+  echo "Starting MariaDB service..."
+  service mysql start || echo "Warning: Could not start MariaDB automatically. Please run 'service mysql start' manually."
+fi
+
 # 2. 백엔드 업데이트
 echo "[2/4] Updating Backend dependencies (using Virtual Env)..."
 cd backend
@@ -28,7 +37,7 @@ python3 -m pip install -r requirements.txt
 # 이전 로직: echo "DATABASE_URL=mysql+pymysql://root:yourpassword@192.168.1.113:3306/chdb?charset=utf8mb4" > .env
 # 변경 내용: DB 접속 주소를 127.0.0.1로 변경 (같은 우분투 내부에 있으므로 로컬 접속이 더 안정적입니다)
 if [ ! -f .env ]; then
-  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@$TABLET_IP:3306/chdb?charset=utf8mb4" > .env
+  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@127.0.0.1:3306/chdb?charset=utf8mb4" > .env
   echo "SECRET_KEY=your_secret_key" >> .env
   echo ".env 파일이 생성되었습니다. 정보를 올바르게 수정해 주세요."
 fi
@@ -58,9 +67,9 @@ pm2 delete all 2>/dev/null
 pm2 start "venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend --cwd backend
 
 # 프론트엔드 실행 수정
-# 이전 로직: pm2 start "npm run start -- --port 3000" --name mycount-frontend --cwd frontend
-# 변경 내용: 외부 접속을 위해 --host 0.0.0.0 옵션을 추가합니다.
-pm2 start "npm run start -- --port 3000 --hostname 0.0.0.0" --name mycount-frontend --cwd frontend
+# 이전 로직: pm2 start "npm run start -- --port 3000 --hostname 0.0.0.0" --name mycount-frontend --cwd frontend
+# 변경 내용: Termux proot의 uv_interface_addresses 문제를 피하기 위해 --hostname 옵션을 제거합니다.
+pm2 start "npm run start -- --port 3000" --name mycount-frontend --cwd frontend
 
 pm2 save
 

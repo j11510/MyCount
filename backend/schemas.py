@@ -81,7 +81,8 @@ class AccountingRecordBase(BaseModel):
     category_id: int
     description: str
     amount: int
-    type: str # Added type
+    type: str
+    remarks: Optional[str] = None
     date: date
 
 class AccountingRecordCreate(AccountingRecordBase):
@@ -109,12 +110,49 @@ class AccountingAccountResponse(AccountingAccountBase):
 class DonationRecordBase(BaseModel):
     member_name: str
     amount: int
+    note: Optional[str] = None
     date: date
 
 class DonationRecordCreate(DonationRecordBase):
     pass
 
 class DonationRecordResponse(DonationRecordBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class InfantExpenseBase(BaseModel):
+    year: int
+    month: int
+    parent_no: str
+    child_no: Optional[str] = None
+    description: str
+    amount: int
+    payment_method: Optional[str] = None
+    remarks: Optional[str] = None
+    is_child: bool = False
+
+class InfantExpenseCreate(InfantExpenseBase):
+    pass
+
+class InfantExpenseResponse(InfantExpenseBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+class MonthlyReportBase(BaseModel):
+    year: int
+    month: int
+    reporter: Optional[str] = None
+    plan_data: Optional[str] = None
+    attendance_data: Optional[str] = None
+    remarks: Optional[str] = None
+
+class MonthlyReportCreate(MonthlyReportBase):
+    pass
+
+class MonthlyReportResponse(MonthlyReportBase):
     id: int
     created_at: datetime
     class Config:

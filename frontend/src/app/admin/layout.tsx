@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Receipt, LogOut, Users, Shield, Settings, BookOpen, BarChart3, Heart } from "lucide-react";
+import { LayoutDashboard, Receipt, LogOut, Users, Shield, Settings, BookOpen, BarChart3, Heart, Baby, FileText } from "lucide-react";
 import { logout } from "@/lib/api";
 import api from "@/lib/api";
 
@@ -49,8 +49,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     navs.push(
       { name: "회계 카테고리", href: "/admin/accounting/categories", icon: Settings },
       { name: "회계 장부 관리", href: "/admin/accounting/transactions", icon: BookOpen },
+      { name: "통장 잔고 관리", href: "/admin/accounting/accounts", icon: Shield },
       { name: "회계 통계", href: "/admin/accounting/stats", icon: BarChart3 },
-      { name: "헌금 관리", href: "/admin/donations", icon: Heart }
+      { name: "헌금 관리", href: "/admin/donations", icon: Heart },
+      { name: "영아부 지출 관리", href: "/admin/infant-expenses", icon: Baby },
+      { name: "영아부 월별 보고", href: "/admin/monthly-reports", icon: FileText }
     );
   }
 
@@ -100,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
       <main className="flex-1 glass-panel rounded-2xl p-6 shadow-xl border border-white/10 bg-black/40 overflow-x-hidden relative">
-        {(role === "admin" || (role === "manager" && (pathname.startsWith("/admin/accounting") || pathname.startsWith("/admin/donations")))) ? (
+        {(role === "admin" || (role === "manager" && (pathname.startsWith("/admin/accounting") || pathname.startsWith("/admin/donations") || pathname.startsWith("/admin/infant-expenses") || pathname.startsWith("/admin/monthly-reports")))) ? (
           children
         ) : role !== null ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-10">

@@ -51,3 +51,18 @@ frontend/.vercel/
 *.njsproj
 *.sln
 *.swp
+
+# Documents & Media (Exclude as requested)
+*.xlsx
+*.xls
+*.docx
+*.doc
+*.hwp
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.pdf
+월별보고_extracted.txt

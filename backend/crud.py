@@ -135,13 +135,16 @@ def delete_accounting_category(db: Session, category_id: int):
     return db_category
 
 # Accounting Record CRUD
-def get_accounting_records(db: Session, bank_account: str, year: int, month: int):
+def get_accounting_records(db: Session, bank_account: str, year: Optional[int] = None, month: Optional[int] = None):
     from sqlalchemy import extract
-    return db.query(models.AccountingRecord).filter(
-        models.AccountingRecord.bank_account == bank_account,
-        extract('year', models.AccountingRecord.date) == year,
-        extract('month', models.AccountingRecord.date) == month
-    ).order_by(models.AccountingRecord.date.desc()).all()
+    query = db.query(models.AccountingRecord).filter(models.AccountingRecord.bank_account == bank_account)
+    
+    if year:
+        query = query.filter(extract('year', models.AccountingRecord.date) == year)
+    if month:
+        query = query.filter(extract('month', models.AccountingRecord.date) == month)
+        
+    return query.order_by(models.AccountingRecord.date.desc()).all()
 
 def create_accounting_record(db: Session, record: schemas.AccountingRecordCreate):
     db_record = models.AccountingRecord(**record.dict())
@@ -174,6 +177,33 @@ def delete_accounting_record(db: Session, record_id: int):
         db.commit()
     return db_record
 
+def update_accounting_record(db: Session, record_id: int, record: schemas.AccountingRecordCreate):
+    db_record = db.query(models.AccountingRecord).filter(models.AccountingRecord.id == record_id).first()
+    if db_record:
+        # 1. Revert old balance
+        db_account = db.query(models.AccountingAccount).filter(models.AccountingAccount.code == db_record.bank_account).first()
+        if db_account:
+            if db_record.type == "income":
+                db_account.balance -= db_record.amount
+            else:
+                db_account.balance += db_record.amount
+        
+        # 2. Update record
+        for key, value in record.model_dump().items():
+            setattr(db_record, key, value)
+            
+        # 3. Apply new balance (might be different account too)
+        new_account = db.query(models.AccountingAccount).filter(models.AccountingAccount.code == record.bank_account).first()
+        if new_account:
+            if record.type == "income":
+                new_account.balance += record.amount
+            else:
+                new_account.balance -= record.amount
+                
+        db.commit()
+        db.refresh(db_record)
+    return db_record
+
 # Accounting Account CRUD
 def get_accounting_accounts(db: Session):
     return db.query(models.AccountingAccount).all()
@@ -191,9 +221,10 @@ def update_accounting_account_balance(db: Session, code: str, new_balance: int):
 
 def get_accounting_stats(db: Session, year: int, month: int):
     from sqlalchemy import func, extract
-    return db.query(
+    # 1. Monthly totals from AccountingRecord
+    ledger_stats = db.query(
         models.AccountingRecord.bank_account,
-        models.AccountingCategory.name,
+        models.AccountingCategory.name.label("category_name"),
         models.AccountingCategory.type,
         func.sum(models.AccountingRecord.amount).label("total_amount")
     ).join(models.AccountingCategory).filter(
@@ -204,6 +235,43 @@ def get_accounting_stats(db: Session, year: int, month: int):
         models.AccountingCategory.name,
         models.AccountingCategory.type
     ).all()
+    
+    result = [list(s) for s in ledger_stats]
+    
+    return result
+
+def get_account_running_balance(db: Session, bank_account: str, year: int, month: int):
+    from sqlalchemy import func, extract, and_, or_
+    from datetime import date
+    import calendar
+    
+    # Get the last day of the target month
+    last_day = calendar.monthrange(year, month)[1]
+    target_date = date(year, month, last_day)
+    
+    # 1. Get initial balance from account
+    account = db.query(models.AccountingAccount).filter(models.AccountingAccount.code == bank_account).first()
+    initial_balance = account.balance if account else 0
+    
+    # 2. Sum of all transactions (ledger) AFTER the target date to 'reverse' calculate
+    # Or sum everything up to target date if we had a fixed starting point.
+    # Since we only have 'current balance', we calculate backwards.
+    future_expense = db.query(func.sum(models.AccountingRecord.amount)).filter(
+        models.AccountingRecord.bank_account == bank_account,
+        models.AccountingRecord.type == 'expense',
+        models.AccountingRecord.date > target_date
+    ).scalar() or 0
+    
+    future_income = db.query(func.sum(models.AccountingRecord.amount)).filter(
+        models.AccountingRecord.bank_account == bank_account,
+        models.AccountingRecord.type == 'income',
+        models.AccountingRecord.date > target_date
+    ).scalar() or 0
+    
+
+    # Balance at end of target month = Current Balance - (Future Income - Future Expense)
+    running_balance = initial_balance - (future_income - future_expense)
+    return running_balance
 
 # Donation Record CRUD
 def get_donation_records(db: Session, year: int, month: int):
@@ -226,4 +294,74 @@ def delete_donation_record(db: Session, record_id: int):
         db.delete(db_record)
         db.commit()
     return db_record
+
+def update_donation_record(db: Session, record_id: int, record: schemas.DonationRecordCreate):
+    db_record = db.query(models.DonationRecord).filter(models.DonationRecord.id == record_id).first()
+    if db_record:
+        for key, value in record.model_dump().items():
+            setattr(db_record, key, value)
+        db.commit()
+        db.refresh(db_record)
+    return db_record
+
+def get_unique_donors(db: Session):
+    from sqlalchemy import func
+    return db.query(models.DonationRecord.member_name).distinct().all()
+
+# Monthly Report CRUD
+def get_monthly_report(db: Session, year: int, month: int):
+    return db.query(models.MonthlyReport).filter(
+        models.MonthlyReport.year == year,
+        models.MonthlyReport.month == month
+    ).first()
+
+def upsert_monthly_report(db: Session, report: schemas.MonthlyReportCreate):
+    db_report = db.query(models.MonthlyReport).filter(
+        models.MonthlyReport.year == report.year,
+        models.MonthlyReport.month == report.month
+    ).first()
+    
+    if db_report:
+        for key, value in report.model_dump().items():
+            setattr(db_report, key, value)
+    else:
+        db_report = models.MonthlyReport(**report.model_dump())
+        db.add(db_report)
+    
+    db.commit()
+    db.refresh(db_report)
+    return db_report
+
+# Infant Expense (from AccountingRecord)
+def get_infant_expenses_from_ledger(db: Session, year: int, month: int):
+    from sqlalchemy import extract
+    # Category ID 3 is for "영아부물품정리&소모품"
+    return db.query(models.AccountingRecord).filter(
+        models.AccountingRecord.category_id == 3,
+        extract('year', models.AccountingRecord.date) == year,
+        extract('month', models.AccountingRecord.date) == month
+    ).order_by(models.AccountingRecord.date.asc()).all()
+
+def create_infant_expense(db: Session, expense: schemas.InfantExpenseCreate):
+    db_expense = models.InfantExpense(**expense.model_dump())
+    db.add(db_expense)
+    db.commit()
+    db.refresh(db_expense)
+    return db_expense
+
+def update_infant_expense(db: Session, expense_id: int, expense: schemas.InfantExpenseCreate):
+    db_expense = db.query(models.InfantExpense).filter(models.InfantExpense.id == expense_id).first()
+    if db_expense:
+        for key, value in expense.model_dump().items():
+            setattr(db_expense, key, value)
+        db.commit()
+        db.refresh(db_expense)
+    return db_expense
+
+def delete_infant_expense(db: Session, expense_id: int):
+    db_expense = db.query(models.InfantExpense).filter(models.InfantExpense.id == expense_id).first()
+    if db_expense:
+        db.delete(db_expense)
+        db.commit()
+    return db_expense
 

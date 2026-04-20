@@ -50,7 +50,8 @@ class AccountingRecord(Base):
     category_id = Column(Integer, ForeignKey("accounting_categories.id"))
     description = Column(String(255))
     amount = Column(Integer, default=0)
-    type = Column(String(20)) # "income", "expense" - MOVED HERE
+    type = Column(String(20)) # "income", "expense"
+    remarks = Column(String(500), nullable=True)
     date = Column(Date, index=True)
     
     category = relationship("AccountingCategory")
@@ -67,5 +68,30 @@ class DonationRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     member_name = Column(String(100), index=True)
     amount = Column(Integer, default=0)
+    note = Column(String(255), nullable=True)
     date = Column(Date, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class InfantExpense(Base):
+    __tablename__ = "infant_expenses"
+    id = Column(Integer, primary_key=True, index=True)
+    year = Column(Integer, index=True)
+    month = Column(Integer, index=True)
+    parent_no = Column(String(10), index=True) # e.g., "1", "2"
+    child_no = Column(String(10), nullable=True) # e.g., "1-1", "1-2"
+    description = Column(String(255))
+    amount = Column(Integer, default=0) # Parent amount or child amount
+    payment_method = Column(String(50), nullable=True)
+    remarks = Column(String(255), nullable=True)
+    is_child = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+class MonthlyReport(Base):
+    __tablename__ = "monthly_reports"
+    id = Column(Integer, primary_key=True, index=True)
+    year = Column(Integer, index=True)
+    month = Column(Integer, index=True)
+    reporter = Column(String(50))
+    plan_data = Column(String(2000)) # JSON string for next month's plans
+    attendance_data = Column(String(2000)) # JSON string for attendance stats
+    remarks = Column(String(500))
+    created_at = Column(DateTime, default=datetime.now)

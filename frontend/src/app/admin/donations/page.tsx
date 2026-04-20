@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, Plus, Trash2, Download, Calendar, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { Heart, Plus, Trash2, Download, Calendar, ChevronLeft, ChevronRight, User, Edit3, X } from "lucide-react";
 import api from "@/lib/api";
 
 import { motion } from "framer-motion";
@@ -12,15 +12,36 @@ export default function DonationManagement() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [donorList, setDonorList] = useState<string[]>([]);
+  
+  // Edit state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    member_name: "",
+    amount: "",
+    note: "",
+    date: ""
+  });
   
   // Form state
   const [memberName, setMemberName] = useState("");
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchRecords();
+    fetchDonors();
   }, [year, month]);
+
+  const fetchDonors = async () => {
+    try {
+      const res = await api.get("/donations/donors");
+      setDonorList(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -51,12 +72,15 @@ export default function DonationManagement() {
       await api.post("/donations", {
         member_name: memberName,
         amount: parseInt(amount),
+        note: note,
         date: date
       });
       setMemberName("");
       setAmount("");
-      setShowAddForm(false);
+      setNote("");
+      // setShowAddForm(false); // Keep it open for continuous entry
       fetchRecords();
+      fetchDonors();
     } catch (e) {
       console.error(e);
       alert("등록 중 오류가 발생했습니다.");
@@ -68,9 +92,37 @@ export default function DonationManagement() {
     try {
       await api.delete(`/donations/${id}`);
       fetchRecords();
+      fetchDonors();
     } catch (e) {
       console.error(e);
       alert("삭제 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleEditStart = (record: any) => {
+    setEditingId(record.id);
+    setEditForm({
+      member_name: record.member_name,
+      amount: record.amount.toString(),
+      note: record.note || "",
+      date: record.date
+    });
+  };
+
+  const handleEditSave = async (id: number) => {
+    if (!editForm.member_name || !editForm.amount || !editForm.date) return;
+    try {
+      await api.put(`/donations/${id}`, {
+        member_name: editForm.member_name,
+        amount: parseInt(editForm.amount),
+        note: editForm.note,
+        date: editForm.date
+      });
+      setEditingId(null);
+      fetchRecords();
+      fetchDonors();
+    } catch (e: any) {
+      alert(e.response?.data?.detail || "수정 중 오류가 발생했습니다.");
     }
   };
 
@@ -157,55 +209,88 @@ export default function DonationManagement() {
 
             {showAddForm && (
               <motion.form 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
                 onSubmit={handleAddDonation} 
-                className="mt-6 space-y-4 pt-6 border-t border-white/10"
+                className="mt-6 space-y-5 pt-6 border-t border-white/10"
               >
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">성함</label>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">날짜</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <input 
-                      type="text" 
-                      value={memberName}
-                      onChange={(e) => setMemberName(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 p-3 pl-10 text-white rounded-xl focus:border-pink-500 outline-none transition-all" 
-                      placeholder="홍길동"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">금액</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-3 text-gray-500 font-bold">₩</span>
-                    <input 
-                      type="number" 
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 p-3 pl-8 text-white rounded-xl focus:border-pink-500 outline-none transition-all" 
-                      placeholder="0"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">날짜</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+                    <Calendar className="absolute left-3 top-3.5 w-4 h-4 text-pink-500" />
                     <input 
                       type="date" 
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 p-3 pl-10 text-white rounded-xl focus:border-pink-500 outline-none transition-all" 
+                      className="w-full bg-black/40 border border-white/10 p-3.5 pl-10 text-white rounded-xl focus:border-pink-500 outline-none transition-all text-lg" 
                       required
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">성함</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3.5 w-4 h-4 text-pink-500" />
+                    <input 
+                      type="text" 
+                      list="donor-names"
+                      value={memberName}
+                      onChange={(e) => setMemberName(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-3.5 pl-10 text-white rounded-xl focus:border-pink-500 outline-none transition-all" 
+                      placeholder="성함을 입력하거나 선택하세요"
+                      autoComplete="off"
+                      required
+                    />
+                    <datalist id="donor-names">
+                      {donorList.map(name => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">금액</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3.5 text-pink-500 font-bold">₩</span>
+                    <input 
+                      type="number" 
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 p-3.5 pl-8 text-white rounded-xl focus:border-pink-500 outline-none transition-all font-mono text-xl font-bold" 
+                      placeholder="0"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mt-3">
+                    {[1000, 2000, 5000, 10000].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setAmount(val.toString())}
+                        className="py-2 text-[10px] font-bold bg-white/5 hover:bg-pink-500/20 border border-white/5 hover:border-pink-500/30 rounded-lg text-gray-400 hover:text-pink-300 transition-all"
+                      >
+                        {val.toLocaleString()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">비고</label>
+                  <input 
+                    type="text" 
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 p-3.5 text-white rounded-xl focus:border-pink-500 outline-none transition-all text-sm" 
+                    placeholder="기타 메모 (예: 감사헌금)"
+                  />
+                </div>
+
                 <button 
                   type="submit"
-                  className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded-2xl transition-all shadow-lg shadow-pink-500/20"
+                  className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-pink-500/20 mt-2"
                 >
                   등록 완료
                 </button>
@@ -241,27 +326,117 @@ export default function DonationManagement() {
                     {groupedRecords[dateString].items.map((record: any) => (
                       <tr 
                         key={record.id} 
-                        className="hover:bg-white/5 transition-colors group"
+                        className={`hover:bg-white/5 transition-colors group ${editingId === record.id ? 'bg-pink-500/10' : ''}`}
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/10 flex items-center justify-center text-[11px] font-bold text-pink-300 border border-white/5">
-                              {record.member_name.charAt(0)}
-                            </div>
-                            <span className="font-bold text-white">{record.member_name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right font-mono font-bold text-white text-lg">
-                          ₩{record.amount.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center w-20">
-                          <button 
-                            onClick={() => handleDelete(record.id)}
-                            className="p-2.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
+                        {editingId === record.id ? (
+                          <>
+                            <td className="px-6 py-3">
+                              <div className="flex flex-col gap-2">
+                                <input 
+                                  type="text" 
+                                  list="donor-names"
+                                  value={editForm.member_name}
+                                  onChange={(e) => setEditForm({...editForm, member_name: e.target.value})}
+                                  className="bg-black/40 border border-pink-500/30 p-2 text-white rounded-lg outline-none text-sm"
+                                  placeholder="성함"
+                                />
+                                <input 
+                                  type="date"
+                                  value={editForm.date}
+                                  onChange={(e) => setEditForm({...editForm, date: e.target.value})}
+                                  className="bg-black/40 border border-pink-500/30 p-2 text-white rounded-lg outline-none text-xs"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 text-right">
+                              <div className="flex flex-col items-end gap-2">
+                                <input 
+                                  type="number" 
+                                  value={editForm.amount}
+                                  onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
+                                  className="w-32 bg-black/40 border border-pink-500/30 p-2 text-white rounded-lg outline-none text-right font-mono font-bold"
+                                  placeholder="금액"
+                                />
+                                <div className="flex gap-1">
+                                  {[1000, 5000, 10000].map(v => (
+                                    <button 
+                                      key={v}
+                                      type="button"
+                                      onClick={() => setEditForm({...editForm, amount: v.toString()})}
+                                      className="px-2 py-1 bg-white/5 hover:bg-white/10 rounded-md text-[10px] text-gray-400"
+                                    >
+                                      {v/1000}k
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3">
+                              <input 
+                                type="text" 
+                                value={editForm.note}
+                                onChange={(e) => setEditForm({...editForm, note: e.target.value})}
+                                className="w-full bg-black/40 border border-pink-500/30 p-2 text-white rounded-lg outline-none text-xs"
+                                placeholder="비고"
+                              />
+                            </td>
+                            <td className="px-6 py-3 text-center w-28">
+                              <div className="flex items-center justify-center gap-2">
+                                <button 
+                                  onClick={() => handleEditSave(record.id)}
+                                  className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all"
+                                  title="저장"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => setEditingId(null)}
+                                  className="p-2 text-gray-500 hover:bg-white/10 rounded-xl transition-all"
+                                  title="취소"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/10 flex items-center justify-center text-[11px] font-bold text-pink-300 border border-white/5">
+                                  {record.member_name.charAt(0)}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-white">{record.member_name}</span>
+                                  {record.note && (
+                                    <span className="text-[10px] text-gray-500 italic">{record.note}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right font-mono font-bold text-white text-lg">
+                              ₩{record.amount.toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center w-28">
+                              <div className="flex items-center justify-center gap-1">
+                                <button 
+                                  onClick={() => handleEditStart(record)}
+                                  className="p-2.5 text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                  title="수정"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDelete(record.id)}
+                                  className="p-2.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                  title="삭제"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>

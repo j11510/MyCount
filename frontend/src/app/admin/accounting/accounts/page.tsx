@@ -35,7 +35,9 @@ export default function AccountingAccounts() {
 
   const handleSave = async (code: string) => {
     try {
+      // Update both absolute current balance and the anchor initial_balance
       await api.put(`/accounting/accounts/${code}/balance?balance=${editValue}`);
+      await api.put(`/accounting/accounts/${code}/initial-balance?initial_balance=${editValue}`);
       setEditingCode(null);
       fetchAccounts();
     } catch (e: any) {

@@ -51,8 +51,10 @@ class AccountingRecord(Base):
     description = Column(String(255))
     amount = Column(Integer, default=0)
     type = Column(String(20)) # "income", "expense"
+    payment_method = Column(String(50), nullable=True)
     remarks = Column(String(500), nullable=True)
     date = Column(Date, index=True)
+    is_processed = Column(Boolean, default=False)
     
     category = relationship("AccountingCategory")
 
@@ -61,7 +63,8 @@ class AccountingAccount(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), unique=True, index=True) # "finances", "donations", "meeting"
     display_name = Column(String(100))
-    balance = Column(Integer, default=0)
+    balance = Column(Integer, default=0) # Current Total Balance
+    initial_balance = Column(Integer, default=0) # Initial Carry-over Balance
 
 class DonationRecord(Base):
     __tablename__ = "donation_records"
@@ -95,3 +98,11 @@ class MonthlyReport(Base):
     attendance_data = Column(String(2000)) # JSON string for attendance stats
     remarks = Column(String(500))
     created_at = Column(DateTime, default=datetime.now)
+
+class AccountingMonthlyBalance(Base):
+    __tablename__ = "accounting_monthly_balances"
+    id = Column(Integer, primary_key=True, index=True)
+    bank_account = Column(String(50), index=True)
+    year = Column(Integer, index=True)
+    month = Column(Integer, index=True)
+    opening_balance = Column(Integer, default=0)

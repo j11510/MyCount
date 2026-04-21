@@ -127,7 +127,7 @@ def delete_accounting_category(category_id: int, db: Session = Depends(get_db), 
 
 @app.get("/accounting/transactions/{bank_account}", response_model=List[schemas.AccountingRecordResponse])
 def read_accounting_transactions(bank_account: str, year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
-    return crud.get_accounting_records(db, bank_account, year, month)
+    return crud.get_accounting_records(db, year=year, month=month, bank_account=bank_account)
 
 @app.post("/accounting/transactions", response_model=schemas.AccountingRecordResponse)
 def create_accounting_transaction(record: schemas.AccountingRecordCreate, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
@@ -145,6 +145,10 @@ def update_accounting_transaction(record_id: int, record: schemas.AccountingReco
         raise HTTPException(status_code=404, detail="Record not found")
     return db_record
 
+@app.patch("/accounting/transactions/{record_id}/status", response_model=schemas.AccountingRecordResponse)
+def update_transaction_status(record_id: int, is_processed: bool, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.update_accounting_record_status(db, record_id, is_processed)
+
 @app.get("/accounting/stats")
 def read_accounting_stats(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
     stats = crud.get_accounting_stats(db, year, month)
@@ -160,22 +164,40 @@ def read_accounting_stats(year: int, month: int, db: Session = Depends(get_db), 
 
 @app.get("/accounting/balances")
 def read_accounting_balances(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
-    import calendar
-    prev_year, prev_month = (year, month - 1) if month > 1 else (year - 1, 12)
-    
     results = {}
     for code in ["finances", "donations", "meeting"]:
-        opening = crud.get_account_running_balance(db, code, prev_year, prev_month)
-        closing = crud.get_account_running_balance(db, code, year, month)
+        db_bal = crud.get_monthly_opening_balance(db, code, year, month)
+        opening = db_bal.opening_balance if db_bal else 0
+        
+        # Calculate monthly closing based on opening + current month records
+        records = crud.get_accounting_records(db, year, month, code)
+        if records:
+            closing = records[-1].running_balance
+        else:
+            closing = opening
+            
         results[code] = {
             "opening": opening,
             "closing": closing
         }
     return results
 
+@app.get("/accounting/opening-balance")
+def read_opening_balance(bank_account: str, year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    db_bal = crud.get_monthly_opening_balance(db, bank_account, year, month)
+    return {"opening_balance": db_bal.opening_balance if db_bal else 0}
+
+@app.put("/accounting/opening-balance")
+def update_opening_balance(bank_account: str, year: int, month: int, opening_balance: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.update_monthly_opening_balance(db, bank_account, year, month, opening_balance)
+
 @app.get("/accounting/accounts", response_model=List[schemas.AccountingAccountResponse])
 def read_accounting_accounts(db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
     return crud.get_accounting_accounts(db)
+
+@app.put("/accounting/accounts/{code}/initial-balance", response_model=schemas.AccountingAccountResponse)
+def update_initial_balance(code: str, initial_balance: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    return crud.update_initial_balance(db, code, initial_balance)
 
 @app.put("/accounting/accounts/{code}/balance", response_model=schemas.AccountingAccountResponse)
 def update_account_balance(code: str, balance: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
@@ -216,7 +238,7 @@ def create_monthly_report(report: schemas.MonthlyReportCreate, db: Session = Dep
 @app.get("/monthly-reports/export")
 def export_monthly_report(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
     report = crud.get_monthly_report(db, year, month)
-    settlement = crud.get_infant_expenses_from_ledger(db, year, month)
+    settlement = crud.get_infant_expenses_from_ledger(db, year, month, bank_account="finances")
     
     import io
     import json
@@ -328,7 +350,7 @@ def export_monthly_report(year: int, month: int, db: Session = Depends(get_db), 
     ws.merge_cells(f'B{att_header}:D{att_header}')
     ws[f'B{att_header}'] = "영아 출석"
     ws.merge_cells(f'E{att_header}:G{att_header}')
-    ws[f'E{att_header}'] = "교사 출석"
+    ws[f'E{att_header}'] = "총원 (합계)"
     ws.merge_cells(f'H{att_header}:I{att_header}')
     ws[f'H{att_header}'] = "헌금"
     ws[f'J{att_header}'] = "비고"
@@ -345,9 +367,16 @@ def export_monthly_report(year: int, month: int, db: Session = Depends(get_db), 
         ws.merge_cells(f'B{r_idx}:D{r_idx}')
         ws[f'B{r_idx}'] = a.get('kids', 0)
         ws.merge_cells(f'E{r_idx}:G{r_idx}')
-        ws[f'E{r_idx}'] = a.get('teachers', 0)
+        ws[f'E{r_idx}'] = a.get('total') if a.get('total') is not None else a.get('teachers', 0)
         ws.merge_cells(f'H{r_idx}:I{r_idx}')
-        ws[f'H{r_idx}'] = f"{a.get('donation', 0):,}원"
+        
+        donation = a.get('donation', 0)
+        if donation == "": donation = 0
+        try:
+            ws[f'H{r_idx}'] = f"{int(donation):,}원"
+        except:
+            ws[f'H{r_idx}'] = f"{donation}원"
+            
         ws[f'J{r_idx}'] = a.get('note', '')
         
         for c in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
@@ -363,12 +392,12 @@ def export_monthly_report(year: int, month: int, db: Session = Depends(get_db), 
 # Infant Expenses (from Ledger)
 @app.get("/infant-expenses", response_model=List[schemas.AccountingRecordResponse])
 def read_infant_expenses(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
-    return crud.get_infant_expenses_from_ledger(db, year, month)
+    return crud.get_infant_expenses_from_ledger(db, year, month, bank_account="finances")
 
 # We remove POST/PUT/DELETE for infant-expenses as they should be managed via Ledger
 @app.get("/infant-expenses/export")
-def export_infant_expenses(year: int, month: int, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
-    expenses = crud.get_infant_expenses_from_ledger(db, year, month)
+def export_infant_expenses(year: int, month: int, bank_account: str = None, db: Session = Depends(get_db), current_user: models.Admin = Depends(auth.check_manager)):
+    expenses = crud.get_infant_expenses_from_ledger(db, year, month, bank_account)
     import pandas as pd
     import io
     from openpyxl import Workbook
@@ -386,18 +415,27 @@ def export_infant_expenses(year: int, month: int, db: Session = Depends(get_db),
     ws['F2'] = f"{year}-{month:02d}-24 기준"
     ws['F2'].alignment = Alignment(horizontal='right')
     
+    # Title
     ws.merge_cells('B3:F3')
-    ws['B3'] = f"영아부 지출내역 ({year}년 {month}월)"
+    ws['B3'] = f'영아부 지출내역 ({year}년 {month}월)'
     ws['B3'].font = Font(bold=True, size=12)
     ws['B3'].alignment = Alignment(horizontal='center')
     
     ws.merge_cells('H3:M3')
-    ws['H3'] = f"지출 세부내역 ({year}년 {month}월)"
+    ws['H3'] = f'지출 세부내역 ({year}년 {month}월)'
     ws['H3'].font = Font(bold=True, size=12)
     ws['H3'].alignment = Alignment(horizontal='center')
     
-    headers_left = ['NO', '항목', '금액', '결제방법', '비고']
-    headers_right = ['NO', '항목', '금액', '세부 산정 금액', '결제방법', '비고']
+    # Set column widths
+    column_widths = {
+        'B': 5, 'C': 25, 'D': 15, 'E': 10, 'F': 15,
+        'H': 5, 'I': 20, 'J': 15, 'K': 30, 'L': 20, 'M': 10
+    }
+    for col, width in column_widths.items():
+        ws.column_dimensions[col].width = width
+    
+    headers_left = ['NO', '지출 항목', '금액', '비고']
+    headers_right = ['NO', '카테고리명', '금액', '세부항목', '결제방법', '비고']
     
     for idx, h in enumerate(headers_left):
         cell = ws.cell(row=4, column=idx+2)
@@ -416,29 +454,54 @@ def export_infant_expenses(year: int, month: int, db: Session = Depends(get_db),
     curr_row = 5
     total_sum = sum(e.amount for e in expenses)
     
+    # Prepare grouped data for Left Section
+    from collections import defaultdict
+    category_sums = defaultdict(int)
+    for e in expenses:
+        cat = db.query(models.AccountingCategory).filter(models.AccountingCategory.id == e.category_id).first()
+        cat_name = cat.name if cat else "미분류"
+        category_sums[cat_name] += e.amount
+    
+    # Fill Left Section (Grouped by Category)
+    for idx, (cat_name, cat_amount) in enumerate(category_sums.items()):
+        row_idx = curr_row + idx
+        ws.cell(row=row_idx, column=2, value=idx + 1).border = thin_border
+        ws.cell(row=row_idx, column=3, value=cat_name).border = thin_border
+        ws.cell(row=row_idx, column=4, value=cat_amount).border = thin_border
+        ws.cell(row=row_idx, column=4).number_format = '#,##0'
+        ws.cell(row=row_idx, column=5).border = thin_border
+        ws.cell(row=row_idx, column=6).border = thin_border
+
+    # Fill Right Section (Detailed Records)
     for idx, e in enumerate(expenses):
         row_idx = curr_row + idx
         no = idx + 1
-        
-        ws.cell(row=row_idx, column=2, value=no).border = thin_border
-        ws.cell(row=row_idx, column=3, value=e.description).border = thin_border
-        ws.cell(row=row_idx, column=4, value=e.amount).border = thin_border
-        ws.cell(row=row_idx, column=5, value=e.bank_account).border = thin_border
-        ws.cell(row=row_idx, column=6, value=e.date.strftime('%m/%d')).border = thin_border
+        cat = db.query(models.AccountingCategory).filter(models.AccountingCategory.id == e.category_id).first()
+        cat_name = cat.name if cat else "미분류"
         
         ws.cell(row=row_idx, column=8, value=no).border = thin_border
-        ws.cell(row=row_idx, column=9, value=e.description).border = thin_border
+        ws.cell(row=row_idx, column=9, value=cat_name).border = thin_border
         ws.cell(row=row_idx, column=10, value=e.amount).border = thin_border
-        ws.cell(row=row_idx, column=11, value=None).border = thin_border
-        ws.cell(row=row_idx, column=12, value=e.bank_account).border = thin_border
+        ws.cell(row=row_idx, column=10).number_format = '#,##0'
+        ws.cell(row=row_idx, column=11, value=e.description).border = thin_border
+        ws.cell(row=row_idx, column=12, value=e.payment_method).border = thin_border
         ws.cell(row=row_idx, column=13, value=e.date.strftime('%m/%d')).border = thin_border
 
-    sum_row = curr_row + len(expenses)
+    sum_row = curr_row + max(len(category_sums), len(expenses))
     ws.cell(row=sum_row, column=2, value="합계").border = thin_border
     ws.cell(row=sum_row, column=3).border = thin_border
     ws.cell(row=sum_row, column=4, value=total_sum).border = thin_border
+    ws.cell(row=sum_row, column=4).number_format = '#,##0'
+    ws.cell(row=sum_row, column=4).font = Font(bold=True)
     ws.cell(row=sum_row, column=5).border = thin_border
     ws.cell(row=sum_row, column=6).border = thin_border
+
+    # Alignment center for NO and Category on Left
+    for r in range(5, sum_row):
+        ws.cell(row=r, column=2).alignment = Alignment(horizontal='center')
+        ws.cell(row=r, column=3).alignment = Alignment(horizontal='center')
+        
+    ws.cell(row=sum_row, column=2).alignment = Alignment(horizontal='center')
     
     ws.cell(row=sum_row, column=2).font = Font(bold=True)
     ws.cell(row=sum_row, column=4).font = Font(bold=True)
@@ -458,7 +521,7 @@ def export_accounting_records(bank_account: str, year: Optional[int] = None, mon
     from fastapi.responses import StreamingResponse
     from datetime import datetime
     
-    records = crud.get_accounting_records(db, bank_account, year, month)
+    records = crud.get_accounting_records(db, year=year, month=month, bank_account=bank_account)
     # Join with category to get names
     data = []
     for r in records:

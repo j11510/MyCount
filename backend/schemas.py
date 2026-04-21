@@ -82,8 +82,10 @@ class AccountingRecordBase(BaseModel):
     description: str
     amount: int
     type: str
+    payment_method: Optional[str] = None
     remarks: Optional[str] = None
     date: date
+    is_processed: bool = False
 
 class AccountingRecordCreate(AccountingRecordBase):
     pass
@@ -91,6 +93,7 @@ class AccountingRecordCreate(AccountingRecordBase):
 class AccountingRecordResponse(AccountingRecordBase):
     id: int
     category: Optional[AccountingCategoryResponse] = None
+    running_balance: Optional[int] = None
     class Config:
         from_attributes = True
 
@@ -98,6 +101,7 @@ class AccountingAccountBase(BaseModel):
     code: str
     display_name: str
     balance: int
+    initial_balance: int = 0
 
 class AccountingAccountCreate(AccountingAccountBase):
     pass
@@ -155,5 +159,19 @@ class MonthlyReportCreate(MonthlyReportBase):
 class MonthlyReportResponse(MonthlyReportBase):
     id: int
     created_at: datetime
+    class Config:
+        from_attributes = True
+
+class AccountingMonthlyBalanceBase(BaseModel):
+    bank_account: str
+    year: int
+    month: int
+    opening_balance: int
+
+class AccountingMonthlyBalanceCreate(AccountingMonthlyBalanceBase):
+    pass
+
+class AccountingMonthlyBalanceResponse(AccountingMonthlyBalanceBase):
+    id: int
     class Config:
         from_attributes = True

@@ -8,8 +8,15 @@ import { motion } from "framer-motion";
 export default function InfantExpenseStatistics() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
-  const [records, setRecords] = useState([]);
+  const [activeAccount, setActiveAccount] = useState("finances");
+  const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const ACCOUNTS = [
+    { id: "finances", name: "재정 통장" },
+    { id: "donations", name: "찬조금 통장" },
+    { id: "meeting", name: "모임 통장" },
+  ];
 
   useEffect(() => {
     fetchRecords();
@@ -18,8 +25,8 @@ export default function InfantExpenseStatistics() {
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      // Fetches AccountingRecord filtered by infant department category
-      const res = await api.get(`/infant-expenses?year=${year}&month=${month}`);
+      // Fetches all stats and we filter by account on frontend
+      const res = await api.get(`/accounting/stats?year=${year}&month=${month}`);
       setRecords(res.data);
     } catch (e) {
       console.error(e);
@@ -39,7 +46,7 @@ export default function InfantExpenseStatistics() {
 
   const handleExport = async () => {
     try {
-      const response = await api.get(`/infant-expenses/export?year=${year}&month=${month}`, {
+      const response = await api.get(`/infant-expenses/export?year=${year}&month=${month}&bank_account=${activeAccount}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -55,7 +62,10 @@ export default function InfantExpenseStatistics() {
     }
   };
 
-  const totalSum = records.reduce((sum: number, r: any) => sum + r.amount, 0);
+  const filteredRecords = records.filter(r => r.bank_account === activeAccount);
+  const totalIncome = filteredRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
+  const totalExpense = filteredRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
+  const totalSum = totalIncome - totalExpense;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-10">
@@ -65,7 +75,7 @@ export default function InfantExpenseStatistics() {
             <Baby className="w-8 h-8 text-blue-400" />
             영아부 지출 통계
           </h1>
-          <p className="text-gray-400 mt-1">회계 장부에 등록된 영아부 지출 데이터를 집계하여 보여줍니다.</p>
+          <p className="text-gray-400 mt-1">통장별 카테고리 집계 현황을 확인하세요. (월별 보고는 <b>재정 통장</b> 기준)</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -87,24 +97,45 @@ export default function InfantExpenseStatistics() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-8 p-1 bg-white/5 rounded-2xl border border-white/5 w-fit">
+        {ACCOUNTS.map((acc) => (
+          <button
+            key={acc.id}
+            onClick={() => setActiveAccount(acc.id)}
+            className={`px-6 py-2 rounded-xl font-bold transition-all text-sm ${activeAccount === acc.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white'}`}
+          >
+            {acc.name}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="glass-panel p-6 rounded-3xl border border-white/10 bg-gradient-to-br from-blue-500/10 to-transparent">
           <h3 className="text-gray-400 font-bold mb-2 flex items-center gap-2 text-xs uppercase tracking-widest">
             <div className="w-2 h-2 rounded-full bg-blue-500" />
-            이달의 총 지출
+            이달의 수입 (+)
           </h3>
-          <p className="text-3xl font-bold font-mono text-white">
-            ₩{totalSum.toLocaleString()}
+          <p className="text-3xl font-bold font-mono text-blue-400">
+            ₩{totalIncome.toLocaleString()}
           </p>
         </div>
-        <div className="glass-panel p-6 rounded-3xl border border-white/10 flex items-center gap-4 col-span-2">
-          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-blue-400">
-             <AlertCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-300 font-medium">데이터 출처 안내</p>
-            <p className="text-xs text-gray-500 mt-1">이 화면의 데이터는 [회계 장부 관리] 메뉴에서 '영아부물품정리&소모품' 카테고리로 등록된 내역을 기반으로 자동 집계됩니다. 데이터 수정은 회계 장부 관리에서 진행해 주세요.</p>
-          </div>
+        <div className="glass-panel p-6 rounded-3xl border border-white/10 bg-gradient-to-br from-red-500/10 to-transparent">
+          <h3 className="text-gray-400 font-bold mb-2 flex items-center gap-2 text-xs uppercase tracking-widest">
+            <div className="w-2 h-2 rounded-full bg-red-500" />
+            이달의 지출 (-)
+          </h3>
+          <p className="text-3xl font-bold font-mono text-red-400">
+            ₩{totalExpense.toLocaleString()}
+          </p>
+        </div>
+        <div className="glass-panel p-6 rounded-3xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-transparent">
+          <h3 className="text-gray-400 font-bold mb-2 flex items-center gap-2 text-xs uppercase tracking-widest">
+            <div className="w-2 h-2 rounded-full bg-purple-500" />
+            최종 정산 금액
+          </h3>
+          <p className={`text-3xl font-bold font-mono ${totalSum >= 0 ? 'text-white' : 'text-red-400'}`}>
+            {totalSum >= 0 ? '+' : '-'} ₩{Math.abs(totalSum).toLocaleString()}
+          </p>
         </div>
       </div>
 
@@ -114,30 +145,28 @@ export default function InfantExpenseStatistics() {
             <thead>
               <tr className="bg-white/5 text-gray-400 text-[10px] font-bold uppercase tracking-widest text-left">
                 <td className="px-6 py-4 w-20">NO</td>
-                <td className="px-6 py-4">날짜</td>
-                <td className="px-6 py-4">항목 (설명)</td>
-                <td className="px-6 py-4">통장</td>
-                <td className="px-6 py-4 text-right">지출 금액</td>
+                <td className="px-6 py-4">카테고리명</td>
+                <td className="px-6 py-4">구분</td>
+                <td className="px-6 py-4 text-right">합계 금액</td>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {records.map((record: any, idx: number) => (
-                <tr key={record.id} className="hover:bg-white/5 transition-all text-sm">
+              {filteredRecords.map((record: any, idx: number) => (
+                <tr key={idx} className="hover:bg-white/5 transition-all text-sm">
                   <td className="px-6 py-4 font-mono text-gray-500">{idx + 1}</td>
-                  <td className="px-6 py-4 text-gray-400">{record.date}</td>
-                  <td className="px-6 py-4 font-bold text-white">{record.description}</td>
+                  <td className="px-6 py-4 font-bold text-white">{record.category_name}</td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-white/5 rounded text-[10px] text-blue-300 border border-blue-500/20">
-                      {record.bank_account}
+                    <span className={`px-2 py-1 rounded text-[10px] border ${record.type === 'income' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                      {record.type === 'income' ? '입금' : '지출'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right font-mono font-bold text-white">
-                    ₩{record.amount.toLocaleString()}
+                  <td className={`px-6 py-4 text-right font-mono font-bold ${record.type === 'income' ? 'text-blue-400' : 'text-red-400'}`}>
+                    {record.type === 'income' ? '+' : '-'} ₩{record.amount.toLocaleString()}
                   </td>
                 </tr>
               ))}
 
-              {records.length === 0 && !loading && (
+              {filteredRecords.length === 0 && !loading && (
                 <tr>
                   <td colSpan={5} className="py-24 text-center">
                     <div className="flex flex-col items-center gap-3">

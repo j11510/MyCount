@@ -96,7 +96,7 @@ export default function MonthlyReportManagement() {
   const addPlanRow = () => setPlanData([...planData, { item: "", budget: 0 }]);
   const removePlanRow = (idx: number) => setPlanData(planData.filter((_, i) => i !== idx));
   
-  const addAttendanceRow = () => setAttendanceData([...attendanceData, { date: "", kids: 0, teachers: 0, donation: 0, note: "" }]);
+  const addAttendanceRow = () => setAttendanceData([...attendanceData, { date: "", kids: "", total: "", donation: "", note: "" }]);
   const removeAttendanceRow = (idx: number) => setAttendanceData(attendanceData.filter((_, i) => i !== idx));
 
   const changeMonth = (delta: number) => {
@@ -142,12 +142,12 @@ export default function MonthlyReportManagement() {
         {/* Settlement (Auto) */}
         <section className="glass-panel p-8 rounded-3xl border border-white/10 flex flex-col gap-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Wallet className="w-6 h-6 text-yellow-400" />
-              금월 사업보고 (결산)
-            </h2>
-            <span className="text-xs text-gray-500 font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5 uppercase">Auto Ledger</span>
-          </div>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Wallet className="w-6 h-6 text-yellow-400" />
+                금월 사업보고 (결산 - 재정통장)
+              </h2>
+              <span className="text-xs text-blue-400 font-bold bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 uppercase tracking-tighter">Finance Account</span>
+            </div>
           <div className="bg-black/20 rounded-2xl overflow-hidden border border-white/5">
              <table className="w-full text-sm">
                 <thead className="bg-white/5 text-gray-500 font-bold text-[10px] uppercase">
@@ -244,8 +244,8 @@ export default function MonthlyReportManagement() {
                 <tr className="bg-white/5 text-gray-500 text-[10px] font-bold uppercase tracking-widest text-left ring-1 ring-white/5">
                    <td className="px-6 py-4">주일/차수</td>
                    <td className="px-6 py-4">영아 출석</td>
-                   <td className="px-6 py-4">교사 출석</td>
-                   <td className="px-6 py-4">헌금액 (₩)</td>
+                   <td className="px-6 py-4 text-purple-400">총원 (합계)</td>
+                   <td className="px-6 py-4 text-blue-400">헌금액 (₩)</td>
                    <td className="px-6 py-4">특이사항</td>
                    <td className="px-6 py-4 w-10"></td>
                 </tr>
@@ -257,13 +257,13 @@ export default function MonthlyReportManagement() {
                       <input className="bg-transparent text-sm w-24 border-none focus:ring-0 p-0 text-white font-bold" value={a.date} onChange={(e) => { const nd = [...attendanceData]; nd[i].date = e.target.value; setAttendanceData(nd); }} placeholder="예: 2/1"/>
                     </td>
                     <td className="px-4 py-2">
-                       <input type="number" className="bg-transparent text-sm w-20 border-none focus:ring-0 p-0 text-white" value={a.kids} onChange={(e) => { const nd = [...attendanceData]; nd[i].kids = parseInt(e.target.value) || 0; setAttendanceData(nd); }}/>
+                       <input type="number" className="bg-transparent text-sm w-20 border-none focus:ring-0 p-0 text-white" value={a.kids ?? ""} onChange={(e) => { const nd = [...attendanceData]; nd[i].kids = e.target.value; setAttendanceData(nd); }}/>
                     </td>
                     <td className="px-4 py-2">
-                       <input type="number" className="bg-transparent text-sm w-20 border-none focus:ring-0 p-0 text-white" value={a.teachers} onChange={(e) => { const nd = [...attendanceData]; nd[i].teachers = parseInt(e.target.value) || 0; setAttendanceData(nd); }}/>
+                       <input type="number" className="bg-transparent text-sm w-20 border-none focus:ring-0 p-0 text-purple-400 font-bold" value={a.total ?? a.teachers ?? ""} onChange={(e) => { const nd = [...attendanceData]; nd[i].total = e.target.value; setAttendanceData(nd); }}/>
                     </td>
                     <td className="px-4 py-2">
-                       <input type="number" className="bg-transparent text-sm w-32 border-none focus:ring-0 p-0 text-blue-400 font-bold" value={a.donation} onChange={(e) => { const nd = [...attendanceData]; nd[i].donation = parseInt(e.target.value) || 0; setAttendanceData(nd); }}/>
+                       <input type="number" className="bg-transparent text-sm w-32 border-none focus:ring-0 p-0 text-blue-400 font-bold" value={a.donation ?? ""} onChange={(e) => { const nd = [...attendanceData]; nd[i].donation = e.target.value; setAttendanceData(nd); }}/>
                     </td>
                     <td className="px-4 py-2">
                        <input className="bg-transparent text-xs w-full border-none focus:ring-0 p-0 text-gray-400" value={a.note} onChange={(e) => { const nd = [...attendanceData]; nd[i].note = e.target.value; setAttendanceData(nd); }} placeholder="비고 입력"/>

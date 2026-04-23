@@ -1,3 +1,3 @@
 "id","username","hashed_password","role"
 1,admin,$2b$12$75.4.gI7WuZPw1W16GxTFuggRBicQmvJdYLZwnzUQha7TNk87l2bO,admin
-3,mng,$2b$12$EpCpzkAqx/gbiYYSSjWoKutkdCMvv/d7XJfCTW69yMqIrOnyXIflW,manager
+2,mng,$2b$12$EpCpzkAqx/gbiYYSSjWoKutkdCMvv/d7XJfCTW69yMqIrOnyXIflW,manager

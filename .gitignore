@@ -66,3 +66,10 @@ frontend/.vercel/
 *.svg
 *.pdf
 월별보고_extracted.txt
+
+# YML & SQL (Excluded as requested)
+*.yml
+*.yaml
+*.sql
+
+*.md

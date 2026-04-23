@@ -2,12 +2,11 @@ import axios from 'axios';
 
 const getBaseURL = () => {
   if (typeof window !== "undefined") {
-    // 1. .env.local에 설정된 값이 있으면 우선 사용
+    // 1. .env에 설정된 값이 있으면 우선 사용 (Build 시점 변수)
     if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
     
-    // 2. 현재 접속한 도메인(IP)을 기준으로 8000 포트 (백엔드) 연결
-    const hostname = window.location.hostname;
-    return `http://${hostname}:8000`;
+    // 2. Nginx 프록시를 통한 상대 경로 (/api) 사용
+    return '/api';
   }
   return 'http://localhost:8000';
 };

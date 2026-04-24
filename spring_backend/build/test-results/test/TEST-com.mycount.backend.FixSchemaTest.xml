@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.mycount.backend.FixSchemaTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-04-24T07:48:07" hostname="DESKTOP-63HCIUE" time="0.969">
+  <properties/>
+  <testcase name="fixSchema()" classname="com.mycount.backend.FixSchemaTest" time="0.969"/>
+  <system-out><![CDATA[16:47:57.302 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.mycount.backend.FixSchemaTest]: FixSchemaTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:47:57.477 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.mycount.backend.MycountApplication for test class com.mycount.backend.FixSchemaTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-04-24T16:47:58.446+09:00  INFO 44932 --- [    Test worker] com.mycount.backend.FixSchemaTest        : Starting FixSchemaTest using Java 21.0.8 with PID 44932 (started by Administrator in D:\PythonProject\mycount\spring_backend)
+2026-04-24T16:47:58.449+09:00  INFO 44932 --- [    Test worker] com.mycount.backend.FixSchemaTest        : The following 1 profile is active: "local"
+2026-04-24T16:48:00.360+09:00  INFO 44932 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-04-24T16:48:00.497+09:00  INFO 44932 --- [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 125 ms. Found 12 JPA repository interfaces.
+2026-04-24T16:48:01.553+09:00  INFO 44932 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-04-24T16:48:01.682+09:00  INFO 44932 --- [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-04-24T16:48:01.741+09:00  INFO 44932 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-04-24T16:48:02.370+09:00  INFO 44932 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-04-24T16:48:02.421+09:00  INFO 44932 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-24T16:48:02.620+09:00  INFO 44932 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.sqlite.jdbc4.JDBC4Connection@11f3400c
+2026-04-24T16:48:02.623+09:00  INFO 44932 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-24T16:48:04.494+09:00  INFO 44932 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-04-24T16:48:04.550+09:00  INFO 44932 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-04-24T16:48:05.568+09:00  WARN 44932 --- [    Test worker] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-24T16:48:06.645+09:00  INFO 44932 --- [    Test worker] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@184e5c44, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@6527aa0, org.springframework.security.web.context.SecurityContextHolderFilter@268eefe7, org.springframework.security.web.header.HeaderWriterFilter@34a06981, org.springframework.web.filter.CorsFilter@6153aca1, org.springframework.security.web.authentication.logout.LogoutFilter@33c5e52f, com.mycount.backend.security.JwtAuthenticationFilter@2f0b5d79, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@61c98f5, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@1784d711, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@30b2d267, org.springframework.security.web.session.SessionManagementFilter@6ea1fc9, org.springframework.security.web.access.ExceptionTranslationFilter@2297c8bf, org.springframework.security.web.access.intercept.AuthorizationFilter@7dbc77ca]
+2026-04-24T16:48:07.501+09:00  INFO 44932 --- [    Test worker] com.mycount.backend.FixSchemaTest        : Started FixSchemaTest in 9.709 seconds (process running for 12.347)
+Starting schema fix...
+accounting_year may already exist: [SQLITE_ERROR] SQL error or missing database (duplicate column name: accounting_year)
+accounting_month may already exist: [SQLITE_ERROR] SQL error or missing database (duplicate column name: accounting_month)
+initial_balance may already exist: [SQLITE_ERROR] SQL error or missing database (duplicate column name: initial_balance)
+Created accounting_account_history table
+Schema fix finished.
+]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\Administrator\.gradle\caches\modules-2\files-2.1\net.bytebuddy\byte-buddy-agent\1.14.13\979ce25f7d3096a2e82214ba7dc972a05ce7a171\byte-buddy-agent-1.14.13.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

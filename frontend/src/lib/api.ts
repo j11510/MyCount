@@ -1,11 +1,7 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  if (typeof window !== "undefined") {
-    // Nginx 프록시를 통한 상대 경로 (/api) 무조건 사용
-    return '/api';
-  }
-  return 'http://localhost:8000';
+  return process.env.NEXT_PUBLIC_API_URL || '/api';
 };
 
 const api = axios.create({

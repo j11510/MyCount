@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { BookOpen, Plus, Trash2, Calendar, CreditCard, ChevronLeft, ChevronRight, ArrowUpCircle, ArrowDownCircle, Edit3, Save, X } from "lucide-react";
+import { BookOpen, Plus, Trash2, Calendar, CreditCard, ChevronLeft, ChevronRight, ArrowUpCircle, ArrowDownCircle, Edit3, Save, X, ArrowRight, RefreshCcw } from "lucide-react";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 
@@ -84,7 +84,12 @@ export default function AccountingTransactions() {
 
   const handleUpdateOpeningBalance = async () => {
     try {
-      await api.put(`/accounting/opening-balance?bank_account=${activeAccount}&year=${year}&month=${month}&opening_balance=${parseInt(newOpeningBalance)}`);
+      await api.put(`/accounting/opening-balance`, {
+        bank_account: activeAccount,
+        year: year,
+        month: month,
+        opening_balance: parseInt(newOpeningBalance)
+      });
       setIsEditingOpeningBalance(false);
       fetchBalance();
       fetchTransactions();
@@ -96,10 +101,38 @@ export default function AccountingTransactions() {
 
   const handleToggleStatus = async (recordId: number, currentStatus: boolean) => {
     try {
-      await api.patch(`/accounting/transactions/${recordId}/status?is_processed=${!currentStatus}`);
+      await api.put(`/accounting/transactions/${recordId}/status`, {
+        is_processed: !currentStatus
+      });
       fetchTransactions();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleCarryOver = async (id: number) => {
+    if (!confirm("이 내역을 다음 달로 이월하시겠습니까? (정산 목록에서 다음 달로 이동합니다)")) return;
+    try {
+      await api.put(`/accounting/transactions/${id}/carry-over`);
+      alert("다음 달로 이월되었습니다.");
+      fetchTransactions();
+      fetchBalance();
+    } catch (e) {
+      console.error(e);
+      alert("이월 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleResetPeriod = async (id: number) => {
+    if (!confirm("이 내역의 정산 시점을 원래 날짜로 복구하시겠습니까?")) return;
+    try {
+      await api.put(`/accounting/transactions/${id}/reset-period`);
+      alert("원래 날짜로 복구되었습니다.");
+      fetchTransactions();
+      fetchBalance();
+    } catch (e) {
+      console.error(e);
+      alert("복구 중 오류가 발생했습니다.");
     }
   };
 
@@ -147,14 +180,16 @@ export default function AccountingTransactions() {
   const startEdit = (t: any) => {
     setEditingId(t.id);
     setEditForm({
-      category_id: t.category_id,
+      category_id: t.category?.id || t.category_id,
       description: t.description,
       amount: t.amount,
       type: t.type,
       remarks: t.remarks || "",
       date: t.date,
       bank_account: t.bank_account,
-      payment_method: t.payment_method || ""
+      payment_method: t.payment_method || "",
+      accounting_year: t.accounting_year,
+      accounting_month: t.accounting_month
     });
     setIsEditModalOpen(true);
   };
@@ -164,7 +199,9 @@ export default function AccountingTransactions() {
       await api.put(`/accounting/transactions/${id}`, {
         ...editForm,
         category_id: parseInt(editForm.category_id),
-        amount: parseInt(editForm.amount)
+        amount: parseInt(editForm.amount),
+        accounting_year: editForm.accounting_year,
+        accounting_month: editForm.accounting_month
       });
       setIsEditModalOpen(false);
       setEditingId(null);
@@ -359,15 +396,15 @@ export default function AccountingTransactions() {
             <table className="w-full text-left border-collapse min-w-[1150px]">
               <thead>
                 <tr className="border-b border-white/10 bg-white/5">
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[80px]">상태</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[130px]">날짜</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[140px]">유형</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">상세 내역</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[60px]">상태</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[110px]">날짜</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[120px]">유형</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[120px]">상세 내역</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right w-[120px]">금액</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right w-[140px]">잔액</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[110px]">결재수단</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[180px]">비고</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[90px] text-right">관련</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right w-[130px]">잔액</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[100px]">수단</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[150px]">비고</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider w-[120px] text-right">관련</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 font-mono text-sm">
@@ -382,21 +419,29 @@ export default function AccountingTransactions() {
                         />
                     </td>
                     <td className="px-6 py-4 text-gray-400 font-mono text-xs">{t.date}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4" title={t.category?.name}>
                       <span className={`px-2 py-1 rounded-lg text-[9px] font-bold border ${t.type === 'income' ? 'bg-blue-500/20 border-blue-500/30 text-blue-400' : 'bg-red-500/20 border-red-500/30 text-red-400'}`}>
-                        {t.category?.name}
+                        {t.category?.name && t.category.name.length > 5 ? t.category.name.substring(0, 5) + '...' : t.category?.name}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-medium text-white">{t.description}</td>
+                    <td className="px-6 py-4 font-medium text-white truncate max-w-[120px]" title={t.description}>
+                      {t.description.length > 5 ? t.description.substring(0, 5) + '...' : t.description}
+                    </td>
                     <td className={`px-6 py-4 text-right font-bold ${t.type === 'income' ? 'text-blue-400' : 'text-red-400'}`}>
-                      {t.type === 'income' ? '+' : '-'} ₩{t.amount.toLocaleString()}
+                      {t.type === 'income' ? '+' : '-'} {t.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-gray-300">
-                      ₩{t.running_balance?.toLocaleString() || '-'}
+                      {t.running_balance?.toLocaleString() || '-'}
                     </td>
-                    <td className="px-6 py-4 text-gray-400 text-xs">{t.payment_method}</td>
-                    <td className="px-6 py-4 text-gray-500 truncate max-w-[150px] text-xs">{t.remarks}</td>
+                    <td className="px-6 py-4 text-gray-400 text-xs truncate max-w-[100px]" title={t.payment_method}>
+                      {t.payment_method && t.payment_method.length > 5 ? t.payment_method.substring(0, 5) + '...' : t.payment_method}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500 truncate max-w-[150px] text-xs" title={t.remarks}>
+                      {t.remarks && t.remarks.length > 5 ? t.remarks.substring(0, 5) + '...' : t.remarks}
+                    </td>
                     <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                      <button onClick={() => handleCarryOver(t.id)} title="다음 달로 이월" className="p-2 text-gray-400 hover:text-green-400 transition-all rounded-lg hover:bg-green-500/10"><ArrowRight className="w-4 h-4"/></button>
+                      <button onClick={() => handleResetPeriod(t.id)} title="원래 날짜로 복구" className="p-2 text-gray-400 hover:text-yellow-400 transition-all rounded-lg hover:bg-yellow-500/10"><RefreshCcw className="w-4 h-4"/></button>
                       <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-500/10"><Edit3 className="w-4 h-4"/></button>
                       <button onClick={() => handleDelete(t.id)} className="p-2 text-gray-400 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"><Trash2 className="w-4 h-4"/></button>
                     </td>

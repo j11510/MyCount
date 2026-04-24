@@ -1,0 +1,26 @@
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:sqlite:../backend/mycount.db}
+    driver-class-name: org.sqlite.JDBC
+    # MariaDB와 혼용을 위해 url은 jdbc 포맷을 맞춰주어야 합니다. 
+    # jdbc:sqlite:mycount.db 또는 jdbc:mariadb://db:3306/chdb
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update # Temporarily set to update to force schema synchronization after process kill
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${SECRET_KEY:mycount-super-secret-key-change-in-production}

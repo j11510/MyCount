@@ -67,9 +67,8 @@ frontend/.vercel/
 *.pdf
 월별보고_extracted.txt
 
-# YML & SQL (Excluded as requested)
-*.yml
-*.yaml
+#SQL (Excluded as requested)
 *.sql
-
 *.md
+*.bat
+*.sh

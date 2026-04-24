@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0.0
+pydantic>=2.0.0
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
+pymysql
+pandas
+xlsxwriter
+openpyxl
+python-multipart
+alembic
+jinja2
+bcrypt
+cryptography
+pydantic-settings

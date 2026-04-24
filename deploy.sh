@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# MyCount Deployment Script for Termux (Ubuntu proot)
+# MyCount Deployment Script for Spring Boot (JDK 17)
+# This script is intended for standalone deployment (e.g. Termux or native Linux)
 
 echo "=========================================="
 echo " Starting MyCount Update & Deployment"
@@ -10,55 +11,34 @@ echo "=========================================="
 echo "[1/4] Pulling latest code from GitHub..."
 git pull origin main
 
-# 태블릿 IP 자동 감지
+# 태블릿/서버 IP 자동 감지
 TABLET_IP=$(hostname -I | awk '{print $1}')
-echo "Detected Tablet IP: $TABLET_IP"
+echo "Detected IP: $TABLET_IP"
 
-# 1.5 DB 서비스 확인 (Termux proot 호환성)
-echo "[1.5/4] Checking MariaDB service..."
-# 서비스 명칭 후보군 (mysql, mariadb)
-DB_SERVICE="mysql"
-if ! service $DB_SERVICE status > /dev/null 2>&1; then
-  DB_SERVICE="mariadb"
-fi
+# 2. 백엔드 업데이트 및 빌드
+echo "[2/4] Building Spring Boot Backend (JDK 17)..."
+cd spring_backend
+chmod +x gradlew
+./gradlew build -x test --no-daemon
 
-if service $DB_SERVICE status > /dev/null 2>&1; then
-  echo "MariaDB ($DB_SERVICE) is already running."
-else
-  echo "Starting MariaDB ($DB_SERVICE) service..."
-  service $DB_SERVICE start || echo "Warning: Could not start MariaDB automatically. Please run 'service $DB_SERVICE start' manually."
-fi
-
-# 2. 백엔드 업데이트
-echo "[2/4] Updating Backend dependencies (using Virtual Env)..."
-cd backend
-# 가상환경 생성 및 활성화
-if [ ! -d "venv" ]; then
-  python3 -m venv venv
-fi
-source venv/bin/activate
-python3 -m pip install -r requirements.txt
-
-# .env 파일 설정 수정
-# 이전 로직: echo "DATABASE_URL=mysql+pymysql://root:yourpassword@192.168.1.113:3306/chdb?charset=utf8mb4" > .env
-# 변경 내용: DB 접속 주소를 127.0.0.1로 변경 (같은 우분투 내부에 있으므로 로컬 접속이 더 안정적입니다)
+# .env 파일 설정 확인
 if [ ! -f .env ]; then
-  echo "DATABASE_URL=mysql+pymysql://root:yourpassword@127.0.0.1:3306/chdb?charset=utf8mb4" > .env
-  echo "SECRET_KEY=your_secret_key" >> .env
-  echo ".env 파일이 생성되었습니다. 정보를 올바르게 수정해 주세요."
+  echo "DATABASE_URL=jdbc:mariadb://127.0.0.1:3306/chdb" > .env
+  echo "DB_USER=root" >> .env
+  echo "DB_PASSWORD=admin1234" >> .env
+  echo "SPRING_PROFILES_ACTIVE=prod" >> .env
+  echo ".env 파일이 생성되었습니다. DB 정보를 확인해 주세요."
 fi
 cd ..
 
 # 3. 프론트엔드 업데이트 및 빌드
-echo "[3/4] Building Frontend (This may take a while)..."
+echo "[3/4] Building Frontend..."
 cd frontend
 npm install
 
-# .env.local 설정 수정
-# 이전 로직: echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
-# 변경 내용: 브라우저에서 백엔드로 직접 요청을 보내야 하므로, localhost 대신 '태블릿의 실제 IP'를 사용하는 것이 좋습니다.
+# .env.local 설정 수정 (백엔드 포트 8080 반영)
 if [ ! -f .env.local ]; then
-  echo "NEXT_PUBLIC_API_URL=http://$TABLET_IP:8000" > .env.local
+  echo "NEXT_PUBLIC_API_URL=http://$TABLET_IP:8080" > .env.local
   echo ".env.local에 API 주소($TABLET_IP)가 설정되었습니다."
 fi
 
@@ -69,20 +49,22 @@ cd ..
 echo "[4/4] Restarting services with PM2..."
 pm2 delete all 2>/dev/null
 
-# 백엔드 실행: --host 0.0.0.0 확인됨 (정상)
-pm2 start "venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000" --name mycount-backend --cwd backend
+# 백엔드 실행 (Spring Boot JAR)
+JAR_FILE=$(ls spring_backend/build/libs/*.jar | grep -v "plain" | head -n 1)
+if [ -f "$JAR_FILE" ]; then
+    pm2 start "java -jar $JAR_FILE" --name mycount-backend
+else
+    echo "Error: Jar file not found in spring_backend/build/libs/"
+    exit 1
+fi
 
-# 프론트엔드 실행 수정
-# 이전 로직: pm2 start "npm run start -- --port 3000 --hostname 0.0.0.0" --name mycount-frontend --cwd frontend
-# 변경 내용: Termux proot의 uv_interface_addresses 문제를 피하기 위해 --hostname 옵션을 제거합니다.
+# 프론트엔드 실행
 pm2 start "npm run start -- --port 3000" --name mycount-frontend --cwd frontend
 
 pm2 save
 
-# 출력 메시지 수정: localhost 대신 실제 접근 가능한 IP 안내
-CURRENT_IP=$(hostname -I | awk '{print $1}')
 echo "=========================================="
 echo " Deployment Complete!"
-echo " Backend (API): http://$CURRENT_IP:8000"
-echo " Frontend (UI): http://$CURRENT_IP:3000"
+echo " Backend (API): http://$TABLET_IP:8080"
+echo " Frontend (UI): http://$TABLET_IP:3000"
 echo "=========================================="

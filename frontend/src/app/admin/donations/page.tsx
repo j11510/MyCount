@@ -13,6 +13,7 @@ export default function DonationManagement() {
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [donorList, setDonorList] = useState<string[]>([]);
+  const [role, setRole] = useState<string | null>(null);
   
   // Edit state
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -32,7 +33,15 @@ export default function DonationManagement() {
   useEffect(() => {
     fetchRecords();
     fetchDonors();
+    fetchUser();
   }, [year, month]);
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/me");
+      setRole(res.data.role);
+    } catch (e) {}
+  };
 
   const fetchDonors = async () => {
     try {
@@ -199,13 +208,15 @@ export default function DonationManagement() {
           </div>
 
           <div className="glass-panel p-6 rounded-3xl border border-white/10">
-            <button 
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="w-full bg-white hover:bg-gray-100 text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-white/5"
-            >
-              <Plus className="w-5 h-5" />
-              내역 등록하기
-            </button>
+            {role === 'admin' && (
+              <button 
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="w-full bg-white hover:bg-gray-100 text-black font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-white/5"
+              >
+                <Plus className="w-5 h-5" />
+                내역 등록하기
+              </button>
+            )}
 
             {showAddForm && (
               <motion.form 
@@ -419,20 +430,24 @@ export default function DonationManagement() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-center w-28">
                               <div className="flex items-center justify-center gap-1">
-                                <button 
-                                  onClick={() => handleEditStart(record)}
-                                  className="p-2.5 text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                                  title="수정"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                                <button 
-                                  onClick={() => handleDelete(record.id)}
-                                  className="p-2.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                                  title="삭제"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {role === 'admin' && (
+                                  <>
+                                    <button 
+                                      onClick={() => handleEditStart(record)}
+                                      className="p-2.5 text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                      title="수정"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDelete(record.id)}
+                                      className="p-2.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                      title="삭제"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </>

@@ -48,6 +48,9 @@ public class AccountingService {
                 }
                 r.setRunningBalance(runningBal);
             }
+        } else if (year != null && month != null) {
+            // New logic: Filter by year and month even if bankAccount is null
+            records = recordRepo.findByAccountingYearAndAccountingMonthOrderByDateAsc(year, month);
         } else if (bankAccount != null) {
             records = recordRepo.findByBankAccountOrderByDateAsc(bankAccount);
         } else {
@@ -183,7 +186,10 @@ public class AccountingService {
 
     public java.util.Map<String, java.util.Map<String, Integer>> getBalances(Integer year, Integer month) {
         java.util.Map<String, java.util.Map<String, Integer>> result = new java.util.HashMap<>();
-        for (String code : new String[]{"finances", "donations", "meeting"}) {
+        // Dynamic: Get all registered accounts instead of hardcoded ones
+        List<AccountingAccount> allAccounts = accountRepo.findAll();
+        for (AccountingAccount acc : allAccounts) {
+            String code = acc.getCode();
             AccountingMonthlyBalance dbBal = balanceRepo.findByBankAccountAndYearAndMonth(code, year, month).orElse(null);
             int opening = (dbBal != null) ? dbBal.getOpeningBalance() : 0;
             
@@ -306,6 +312,11 @@ public class AccountingService {
     }
 
     public List<AccountingAccountHistory> getAccountHistory(String bankAccount) {
-        return historyRepo.findByBankAccountOrderByCreatedAtDesc(bankAccount);
+        try {
+            return historyRepo.findByBankAccountOrderByCreatedAtDesc(bankAccount);
+        } catch (Exception e) {
+            System.err.println("Failed to fetch account history: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 }

@@ -53,9 +53,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/token", "/api/login").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // CORS Preflight 허용
-                        .requestMatchers("/api/admin/**").hasAnyRole("admin", "manager", "mng") // mng 역할 추가
-                        .requestMatchers("/api/**").authenticated() // 나머지 API는 인증필요
-                        .anyRequest().permitAll()
+                        
+                        // HTTP Method based RBAC
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/**").hasRole("admin")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/**").hasRole("admin")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/**").hasRole("admin")
+                        .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/**").hasRole("admin")
+                        
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

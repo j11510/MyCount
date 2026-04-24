@@ -82,7 +82,7 @@ public class ExpenseController {
 
     @Operation(summary = "월별 기록 잔액 업데이트", description = "해당 월별 기록의 현재 잔액을 수정합니다.")
     @PutMapping("/monthly-records/{id}/balance")
-    public ResponseEntity<?> updateBalance(@PathVariable Integer id, @RequestParam Integer currentBalance) {
+    public ResponseEntity<?> updateBalance(@PathVariable Integer id, @RequestParam(name = "current_balance") Integer currentBalance) {
         monthlyRecordService.updateMonthlyRecordBalance(id, currentBalance);
         return ResponseEntity.ok(monthlyRecordService.getMonthlyRecord(id));
     }

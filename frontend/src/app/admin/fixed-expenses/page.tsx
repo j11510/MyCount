@@ -11,10 +11,19 @@ export default function FixedExpensesPage() {
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState(0);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     fetchItems();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/me");
+      setRole(res.data.role);
+    } catch (e) {}
+  };
 
   const fetchItems = async () => {
     try {
@@ -53,13 +62,15 @@ export default function FixedExpensesPage() {
           <h1 className="text-3xl font-extrabold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">고정 지출 관리</h1>
           <p className="text-gray-400 mt-1 text-sm tracking-wide">새로운 월 항목 생성 시 자동 추가될 기본 템플릿을 관리하세요.</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="bg-white hover:bg-gray-100 text-black font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all transform hover:scale-105 active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          항목 추가
-        </button>
+        {role === 'admin' && (
+          <button 
+            onClick={() => setShowModal(true)}
+            className="bg-white hover:bg-gray-100 text-black font-semibold px-4 py-2 rounded-xl flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all transform hover:scale-105 active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            항목 추가
+          </button>
+        )}
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-xl">
@@ -86,12 +97,14 @@ export default function FixedExpensesPage() {
                   ₩{item.amount.toLocaleString()}
                 </td>
                 <td className="p-4 text-right">
-                  <button 
-                    onClick={() => handleDelete(item.id)}
-                    className="text-red-400/50 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {role === 'admin' && (
+                    <button 
+                      onClick={() => handleDelete(item.id)}
+                      className="text-red-400/50 hover:text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

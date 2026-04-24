@@ -35,27 +35,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  const navs: any[] = [];
+  const generalNavs = [
+    { name: "월별 기록 목록", href: "/admin", icon: LayoutDashboard, alwaysVisible: true },
+    { name: "고정 지출 관리", href: "/admin/fixed-expenses", icon: Receipt, alwaysVisible: true },
+    { name: "사용자 관리", href: "/admin/users", icon: Users, role: "admin" }
+  ].filter(n => n.alwaysVisible || n.role === role);
 
-  if (role === "admin") {
-    navs.push(
-      { name: "월별 기록 목록", href: "/admin", icon: LayoutDashboard },
-      { name: "고정 지출 관리", href: "/admin/fixed-expenses", icon: Receipt },
-      { name: "사용자 관리", href: "/admin/users", icon: Users }
-    );
-  }
-
-  if (role === "admin" || role === "manager") {
-    navs.push(
-      { name: "회계 카테고리", href: "/admin/accounting/categories", icon: Settings },
-      { name: "회계 장부 관리", href: "/admin/accounting/transactions", icon: BookOpen },
-      { name: "통장 잔고 관리", href: "/admin/accounting/accounts", icon: Shield },
-      { name: "회계 통계", href: "/admin/accounting/stats", icon: BarChart3 },
-      { name: "헌금 관리", href: "/admin/donations", icon: Heart },
-      { name: "영아부 지출 관리", href: "/admin/infant-expenses", icon: Baby },
-      { name: "영아부 월별 보고", href: "/admin/monthly-reports", icon: FileText }
-    );
-  }
+  const accountingNavs = [
+    { name: "회계 카테고리", href: "/admin/accounting/categories", icon: Settings },
+    { name: "회계 장부 관리", href: "/admin/accounting/transactions", icon: BookOpen },
+    { name: "회계 통계", href: "/admin/accounting/stats", icon: BarChart3 },
+    { name: "헌금 관리", href: "/admin/donations", icon: Heart },
+    { name: "영아부 지출 관리", href: "/admin/infant-expenses", icon: Baby },
+    { name: "영아부 월별 보고", href: "/admin/monthly-reports", icon: FileText }
+  ].filter(() => role === "admin" || role === "manager");
 
   return (
     <div className="flex flex-col md:flex-row min-h-[85vh] gap-6 mt-4 md:mt-8">
@@ -71,21 +64,58 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </div>
         </div>
-        <nav className="flex-1 space-y-2">
-          {navs.map((nav) => {
-            const isActive = pathname === nav.href;
-            const Icon = nav.icon;
-            return (
-              <Link 
-                key={nav.name} 
-                href={nav.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 text-white border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-              >
-                <Icon className="w-5 h-5" />
-                {nav.name}
-              </Link>
-            )
-          })}
+        
+        <nav className="flex-1 space-y-6">
+          {/* General Management Section */}
+          {generalNavs.length > 0 && (
+            <div>
+              <p className="px-4 mb-2 text-[10px] font-bold text-gray-500 tracking-widest uppercase">기본 관리</p>
+              <div className="space-y-1">
+                {generalNavs.map((nav) => {
+                  const isActive = pathname === nav.href;
+                  const Icon = nav.icon;
+                  return (
+                    <Link 
+                      key={nav.name} 
+                      href={nav.href}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all font-medium text-sm ${isActive ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 text-white border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {nav.name}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Separator */}
+          {generalNavs.length > 0 && accountingNavs.length > 0 && (
+            <div className="mx-4 border-t border-white/5" />
+          )}
+
+          {/* Accounting Section */}
+          {accountingNavs.length > 0 && (
+            <div>
+              <p className="px-4 mb-2 text-[10px] font-bold text-gray-500 tracking-widest uppercase">장부/회계 시스템</p>
+              <div className="space-y-1">
+                {accountingNavs.map((nav) => {
+                  const isActive = pathname === nav.href;
+                  const Icon = nav.icon;
+                  return (
+                    <Link 
+                      key={nav.name} 
+                      href={nav.href}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all font-medium text-sm ${isActive ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 text-white border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {nav.name}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           {role !== null && role !== "admin" && (
             <p className="text-center text-xs text-gray-500 mt-10 p-4 border border-white/5 bg-white/5 rounded-xl">
               권한이 제한된 상태입니다.<br/>관리자에게 문의하세요.
@@ -94,7 +124,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
         <div className="mt-8 pt-4 border-t border-white/10">
           <button 
-            onClick={logout}
+            onClick={() => {
+              if (confirm("로그아웃 하시겠습니까?")) {
+                logout();
+              }
+            }}
             className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-red-400 hover:bg-red-500/10 w-full text-left"
           >
             <LogOut className="w-5 h-5" />

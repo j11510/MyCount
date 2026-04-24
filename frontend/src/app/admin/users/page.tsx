@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Users, Plus, Trash2, Shield, User as UserIcon } from "lucide-react";
 import api from "@/lib/api";
-
 import { motion } from "framer-motion";
 
 export default function UserManagement() {
@@ -11,11 +11,27 @@ export default function UserManagement() {
   const [showModal, setShowModal] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [role, setRole] = useState("user");
+  const router = useRouter();
 
   useEffect(() => {
     fetchUsers();
+    fetchCurrentUser();
   }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await api.get("/me");
+      if (res.data.role !== 'admin') {
+        router.push("/admin");
+        return;
+      }
+      setUserRole(res.data.role);
+    } catch (e) {
+      router.push("/login");
+    }
+  };
 
   const fetchUsers = async () => {
     try {

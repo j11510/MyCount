@@ -9,10 +9,19 @@ import { motion } from "framer-motion";
 export default function AccountingCategories() {
   const [categories, setCategories] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCategories();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/me");
+      setRole(res.data.role);
+    } catch (e) {}
+  };
 
   const fetchCategories = async () => {
     try {
@@ -57,36 +66,38 @@ export default function AccountingCategories() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Registration Form */}
-        <div className="lg:col-span-1">
-          <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 h-max">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-purple-400" />
-              신규 항목 추가
-            </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-xs uppercase font-bold text-gray-500 mb-2 tracking-wider">항목명</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="예: 식비, 간식비, 헌금, 행사비 등"
-                  className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none font-medium" 
-                  required 
-                />
-              </div>
-              <button 
-                type="submit" 
-                className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg transition-all mt-2"
-              >
-                추가하기
-              </button>
-            </form>
+        {role === 'admin' && (
+          <div className="lg:col-span-1">
+            <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 h-max">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-purple-400" />
+                신규 항목 추가
+              </h2>
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div>
+                  <label className="block text-xs uppercase font-bold text-gray-500 mb-2 tracking-wider">항목명</label>
+                  <input 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="예: 식비, 간식비, 헌금, 행사비 등"
+                    className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none font-medium" 
+                    required 
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg transition-all mt-2"
+                >
+                  추가하기
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* List */}
-        <div className="lg:col-span-2">
+        <div className={role === 'admin' ? "lg:col-span-2" : "col-span-full"}>
           <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-purple-300">
               <Tag className="w-5 h-5" />
@@ -96,12 +107,14 @@ export default function AccountingCategories() {
               {categories.map((cat: any) => (
                 <div key={cat.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl group border border-white/5">
                   <span className="font-medium">{cat.name}</span>
-                  <button 
-                    onClick={() => handleDelete(cat.id, cat.name)}
-                    className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                   {role === 'admin' && (
+                    <button 
+                      onClick={() => handleDelete(cat.id, cat.name)}
+                      className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ))}
               {categories.length === 0 && (

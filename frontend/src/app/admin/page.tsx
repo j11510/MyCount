@@ -12,10 +12,19 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRecords();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/me");
+      setRole(res.data.role);
+    } catch (e) {}
+  };
 
   const fetchRecords = async () => {
     try {
@@ -58,13 +67,15 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-extrabold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">월별 기록 목록</h1>
           <p className="text-gray-400 mt-1">월별 정산 내역 및 계산기를 관리하세요.</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="bg-white hover:bg-gray-100 text-black font-semibold px-4 py-2 rounded-xl flex items-center gap-2 transition-all transform hover:scale-[1.02] shadow-[0_0_15px_rgba(255,255,255,0.1)] active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          새로운 달 작성
-        </button>
+        {role === 'admin' && (
+          <button 
+            onClick={() => setShowModal(true)}
+            className="bg-white hover:bg-gray-100 text-black font-semibold px-4 py-2 rounded-xl flex items-center gap-2 transition-all transform hover:scale-[1.02] shadow-[0_0_15px_rgba(255,255,255,0.1)] active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            새로운 달 작성
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -81,17 +92,15 @@ export default function AdminDashboard() {
                 </div>
                 <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors group-hover:translate-x-1" />
               </div>
-              <div className="flex flex-col gap-1 relative z-10">
-                <span className="text-xs tracking-wider text-gray-500 font-bold">현재 입력된 잔고액</span>
-                <span className="text-lg font-medium text-purple-100 tracking-wide">₩{record.current_balance.toLocaleString()}</span>
-              </div>
-              <button
-                onClick={(e) => handleDelete(e, record.id, record.year, record.month)}
-                className="absolute bottom-4 right-4 p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all z-20"
-                title="삭제"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {role === 'admin' && (
+                <button
+                  onClick={(e) => handleDelete(e, record.id, record.year, record.month)}
+                  className="absolute bottom-4 right-4 p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all z-20"
+                  title="삭제"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </Link>
         ))}

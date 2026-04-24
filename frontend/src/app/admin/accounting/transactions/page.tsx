@@ -22,6 +22,7 @@ export default function AccountingTransactions() {
   const [isEditingOpeningBalance, setIsEditingOpeningBalance] = useState(false);
   const [newOpeningBalance, setNewOpeningBalance] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   
   // Form state
   const [entryType, setEntryType] = useState("expense");
@@ -38,7 +39,15 @@ export default function AccountingTransactions() {
 
   useEffect(() => {
     fetchCategories();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/me");
+      setRole(res.data.role);
+    } catch (e) {}
+  };
 
   useEffect(() => {
     const selected = categories.find(c => c.id.toString() === categoryId);
@@ -305,16 +314,18 @@ export default function AccountingTransactions() {
                 <p className="text-2xl sm:text-3xl font-bold font-mono text-white tracking-tighter">
                   ₩{openingBalance.toLocaleString()}
                 </p>
-                <button 
-                  onClick={() => {
-                    setNewOpeningBalance(openingBalance.toString());
-                    setIsEditingOpeningBalance(true);
-                  }}
-                  className="p-2 hover:bg-white/10 rounded-xl transition-all text-purple-400 flex items-center gap-1 text-xs font-bold"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  금액 수정
-                </button>
+                {role === 'admin' && (
+                  <button 
+                    onClick={() => {
+                      setNewOpeningBalance(openingBalance.toString());
+                      setIsEditingOpeningBalance(true);
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-xl transition-all text-purple-400 flex items-center gap-1 text-xs font-bold"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    금액 수정
+                  </button>
+                )}
               </div>
             )}
             <p className="text-[10px] text-gray-500 mt-2 italic">* 이번 달 시작 금액을 직접 입력하세요.</p>
@@ -344,54 +355,57 @@ export default function AccountingTransactions() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Entry Form */}
-        <div className="lg:col-span-1">
-          <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 sticky top-8">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-purple-400" />
-              내역 등록
-            </h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">구분</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setEntryType("income")} className={`p-2 rounded-xl border flex items-center justify-center gap-2 transition-all font-bold text-sm ${entryType === 'income' ? 'bg-blue-500/20 border-blue-500/50 text-blue-400' : 'bg-black/20 border-white/5 text-gray-500 hover:border-white/20'}`}><ArrowUpCircle className="w-4 h-4" />입금</button>
-                  <button type="button" onClick={() => setEntryType("expense")} className={`p-2 rounded-xl border flex items-center justify-center gap-2 transition-all font-bold text-sm ${entryType === 'expense' ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-black/20 border-white/5 text-gray-500 hover:border-white/20'}`}><ArrowDownCircle className="w-4 h-4" />지출</button>
+        {/* Entry Form */}
+        {role === 'admin' && (
+          <div className="lg:col-span-1">
+            <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 sticky top-8">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-purple-400" />
+                내역 등록
+              </h2>
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">구분</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setEntryType("income")} className={`p-2 rounded-xl border flex items-center justify-center gap-2 transition-all font-bold text-sm ${entryType === 'income' ? 'bg-blue-500/20 border-blue-500/50 text-blue-400' : 'bg-black/20 border-white/5 text-gray-500 hover:border-white/20'}`}><ArrowUpCircle className="w-4 h-4" />입금</button>
+                    <button type="button" onClick={() => setEntryType("expense")} className={`p-2 rounded-xl border flex items-center justify-center gap-2 transition-all font-bold text-sm ${entryType === 'expense' ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-black/20 border-white/5 text-gray-500 hover:border-white/20'}`}><ArrowDownCircle className="w-4 h-4" />지출</button>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">날짜</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">유형 (카테고리)</label>
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" required>
-                  <option value="">유형 선택</option>
-                  {categories.filter(c => c.type === entryType || !c.type || c.type === 'general').map((c: any) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">상세 내역</label>
-                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="상세항목 입력" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">금액</label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none font-mono" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">결재수단</label>
-                <input type="text" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="현금, 카드, 계좌이체 등" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">비고</label>
-                <input type="text" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="특이사항 입력" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" />
-              </div>
-              <button type="submit" className="w-full py-4 rounded-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-xl transition-all mt-4">장부 등록</button>
-            </form>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">날짜</label>
+                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">유형 (카테고리)</label>
+                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" required>
+                    <option value="">유형 선택</option>
+                    {categories.filter(c => c.type === entryType || !c.type || c.type === 'general').map((c: any) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">상세 내역</label>
+                  <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="상세항목 입력" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">금액</label>
+                  <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none font-mono" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">결재수단</label>
+                  <input type="text" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="현금, 카드, 계좌이체 등" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">비고</label>
+                  <input type="text" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="특이사항 입력" className="w-full bg-black/40 border border-white/10 p-3 text-white rounded-xl focus:border-purple-500 outline-none" />
+                </div>
+                <button type="submit" className="w-full py-4 rounded-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-xl transition-all mt-4">장부 등록</button>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Transaction List */}
-        <div className="lg:col-span-3">
+        <div className={role === 'admin' ? "lg:col-span-3" : "lg:col-span-4"}>
           <div className="glass-panel overflow-x-auto border border-white/5 bg-white/5 rounded-3xl">
             <table className="w-full text-left border-collapse min-w-[1150px]">
               <thead>
@@ -410,12 +424,13 @@ export default function AccountingTransactions() {
               <tbody className="divide-y divide-white/5 font-mono text-sm">
                 {transactions.map((t: any) => (
                   <tr key={t.id} className="hover:bg-white/5 transition-all group">
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-center">
                         <input 
                           type="checkbox" 
                           checked={t.is_processed} 
+                          disabled={role !== 'admin'}
                           onChange={() => handleToggleStatus(t.id, t.is_processed)}
-                          className="w-4 h-4 rounded border-white/10 bg-black/40 accent-purple-500 cursor-pointer"
+                          className={`w-4 h-4 rounded border-white/10 bg-black/40 accent-purple-500 ${role === 'admin' ? 'cursor-pointer' : 'cursor-default'}`}
                         />
                     </td>
                     <td className="px-6 py-4 text-gray-400 font-mono text-xs">{t.date}</td>
@@ -440,10 +455,14 @@ export default function AccountingTransactions() {
                       {t.remarks && t.remarks.length > 5 ? t.remarks.substring(0, 5) + '...' : t.remarks}
                     </td>
                     <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
-                      <button onClick={() => handleCarryOver(t.id)} title="다음 달로 이월" className="p-2 text-gray-400 hover:text-green-400 transition-all rounded-lg hover:bg-green-500/10"><ArrowRight className="w-4 h-4"/></button>
-                      <button onClick={() => handleResetPeriod(t.id)} title="원래 날짜로 복구" className="p-2 text-gray-400 hover:text-yellow-400 transition-all rounded-lg hover:bg-yellow-500/10"><RefreshCcw className="w-4 h-4"/></button>
-                      <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-500/10"><Edit3 className="w-4 h-4"/></button>
-                      <button onClick={() => handleDelete(t.id)} className="p-2 text-gray-400 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"><Trash2 className="w-4 h-4"/></button>
+                      {role === 'admin' && (
+                        <>
+                          <button onClick={() => handleCarryOver(t.id)} title="다음 달로 이월" className="p-2 text-gray-400 hover:text-green-400 transition-all rounded-lg hover:bg-green-500/10"><ArrowRight className="w-4 h-4"/></button>
+                          <button onClick={() => handleResetPeriod(t.id)} title="원래 날짜로 복구" className="p-2 text-gray-400 hover:text-yellow-400 transition-all rounded-lg hover:bg-yellow-500/10"><RefreshCcw className="w-4 h-4"/></button>
+                          <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-500/10"><Edit3 className="w-4 h-4"/></button>
+                          <button onClick={() => handleDelete(t.id)} className="p-2 text-gray-400 hover:text-red-400 transition-all rounded-lg hover:bg-red-500/10"><Trash2 className="w-4 h-4"/></button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

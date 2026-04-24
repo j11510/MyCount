@@ -15,8 +15,8 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    // 파이썬 기준 7일
-    private final long EXPIRATION_TIME = 7L * 24 * 60 * 60 * 1000;
+    // 1시간 (3600초 * 1000ms)
+    private final long EXPIRATION_TIME = 1 * 60 * 60 * 1000L;
 
     public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

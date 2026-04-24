@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface AccountingRecordRepository extends JpaRepository<AccountingRecord, Integer> {
     List<AccountingRecord> findByBankAccountAndAccountingYearAndAccountingMonthOrderByDateAsc(String bankAccount, Integer accountingYear, Integer accountingMonth);
+    List<AccountingRecord> findByAccountingYearAndAccountingMonthOrderByDateAsc(Integer accountingYear, Integer accountingMonth);
     List<AccountingRecord> findByBankAccountAndDateBetweenOrderByDateAsc(String bankAccount, LocalDate startDate, LocalDate endDate);
     List<AccountingRecord> findByBankAccountOrderByDateAsc(String bankAccount);
 }

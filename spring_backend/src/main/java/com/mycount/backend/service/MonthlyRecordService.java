@@ -22,19 +22,22 @@ public class MonthlyRecordService {
     private final MonthlyItemRepository itemRepo;
     private final FixedExpenseRepository fixedExpenseRepo;
 
-    public MonthlyRecordService(MonthlyRecordRepository recordRepo, MonthlyItemRepository itemRepo, FixedExpenseRepository fixedExpenseRepo) {
+    public MonthlyRecordService(MonthlyRecordRepository recordRepo, 
+                                MonthlyItemRepository itemRepo, 
+                                FixedExpenseRepository fixedExpenseRepo) {
         this.recordRepo = recordRepo;
         this.itemRepo = itemRepo;
         this.fixedExpenseRepo = fixedExpenseRepo;
     }
 
     public List<MonthlyRecord> getMonthlyRecords() {
-        return recordRepo.findAll(); // 추후 orderBy나 page 적용
+        return recordRepo.findAll();
     }
 
     public MonthlyRecord getMonthlyRecord(Integer id) {
         return recordRepo.findById(id).orElse(null);
     }
+
 
     public MonthlyRecord getMonthlyRecordByDate(Integer year, Integer month) {
         return recordRepo.findByYearAndMonth(year, month).orElse(null);

@@ -16,6 +16,7 @@ export default function MonthDetail() {
   const [record, setRecord] = useState<any>(null);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [items, setItems] = useState<any[]>([]);
+  const [role, setRole] = useState<string | null>(null);
 
   // Global Templates
   const [globalFixed, setGlobalFixed] = useState<any[]>([]);
@@ -31,7 +32,15 @@ export default function MonthDetail() {
   useEffect(() => {
     fetchRecord();
     fetchGlobalFixed();
+    fetchUser();
   }, [recordId]);
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/me");
+      setRole(res.data.role);
+    } catch (e) {}
+  };
 
   const fetchRecord = async () => {
     try {
@@ -220,7 +229,8 @@ export default function MonthDetail() {
                     type="number"
                     value={currentBalance}
                     onChange={(e) => updateBalance(Number(e.target.value))}
-                    className="w-full md:w-48 bg-black/50 border border-purple-500/30 p-2 font-mono text-white rounded-lg focus:border-purple-400 outline-none text-left md:text-right transition-colors"
+                    disabled={role !== 'admin'}
+                    className={`w-full md:w-48 bg-black/50 border ${role === 'admin' ? 'border-purple-500/30' : 'border-transparent'} p-2 font-mono text-white rounded-lg focus:border-purple-400 outline-none text-left md:text-right transition-colors ${role !== 'admin' ? 'cursor-default' : ''}`}
                   />
                 </div>
 
@@ -251,7 +261,8 @@ export default function MonthDetail() {
                        type="number" 
                        value={item.amount}
                        onChange={(e) => updateItemAmount(item.id, Number(e.target.value))}
-                       className="w-full md:w-32 bg-black/50 border border-white/10 p-2 font-mono text-sm text-left md:text-right rounded-lg focus:border-orange-500 outline-none transition-colors"
+                       disabled={role !== 'admin'}
+                       className={`w-full md:w-32 bg-black/50 border ${role === 'admin' ? 'border-white/10 focus:border-orange-500' : 'border-transparent'} p-2 font-mono text-sm text-left md:text-right rounded-lg outline-none transition-colors ${role !== 'admin' ? 'cursor-default' : ''}`}
                      />
                    </div>
                  </div>
@@ -271,9 +282,11 @@ export default function MonthDetail() {
              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-bl-full -mr-8 -mt-8" />
              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 relative z-10 gap-4">
                <h2 className="text-lg font-bold flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500"/> 월별 추가 변동 지출액</h2>
-               <button onClick={() => setShowAddExpense(true)} className="text-xs font-bold tracking-wider text-white bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
-                 <Plus className="w-4 h-4" /> 내역 쓰기
-               </button>
+               {role === 'admin' && (
+                 <button onClick={() => setShowAddExpense(true)} className="text-xs font-bold tracking-wider text-white bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg flex items-center justify-center gap-1 transition-colors">
+                   <Plus className="w-4 h-4" /> 내역 쓰기
+                 </button>
+               )}
              </div>
              
              {showAddExpense && (
@@ -316,9 +329,11 @@ export default function MonthDetail() {
                    <span className="font-medium text-gray-300">{item.name}</span>
                    <div className="flex items-center gap-4">
                      <span className="font-mono text-red-300 text-sm md:text-base">₩{item.amount.toLocaleString()}</span>
-                     <button onClick={() => deleteItem(item.id)} className="text-gray-600 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded flex items-center justify-center">
-                       <Trash2 className="w-4 h-4" />
-                     </button>
+                     {role === 'admin' && (
+                       <button onClick={() => deleteItem(item.id)} className="text-gray-600 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded flex items-center justify-center">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     )}
                    </div>
                  </div>
                ))}
@@ -347,7 +362,7 @@ export default function MonthDetail() {
                   ₩{balanceAfterExpenses.toLocaleString()}
                 </span>
                 <p className="text-[10px] text-gray-500 mt-2 leading-snug">
-                  3. 남은금액 - (자동 고정 지출 + 추가 변동 지출)
+                  3. 남은금액 - (고정지출 + 변동지출)
                 </p>
               </div>
 
@@ -357,9 +372,11 @@ export default function MonthDetail() {
                   <span className="text-[11px] text-emerald-400 font-bold tracking-widest flex items-center gap-1.5">
                     <TrendingUp className="w-3.5 h-3.5" /> 나의 추가 수입 목록
                   </span>
-                  <button onClick={() => setShowAddIncome(true)} className="text-emerald-400 hover:text-white hover:bg-emerald-500 p-1.5 rounded-lg transition-all shadow-sm">
-                    <Plus className="w-4 h-4" />
-                  </button>
+                  {role === 'admin' && (
+                    <button onClick={() => setShowAddIncome(true)} className="text-emerald-400 hover:text-white hover:bg-emerald-500 p-1.5 rounded-lg transition-all shadow-sm">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 <AnimatePresence>
@@ -387,9 +404,11 @@ export default function MonthDetail() {
                       <span className="text-sm text-gray-300 font-medium">{item.name}</span>
                       <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t border-white/5 sm:border-0 pt-2 sm:pt-0">
                         <span className="font-mono text-sm text-emerald-300 font-semibold">₩{item.amount.toLocaleString()}</span>
-                        <button onClick={() => deleteItem(item.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded-md">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {role === 'admin' && (
+                          <button onClick={() => deleteItem(item.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1.5 hover:bg-red-500/10 rounded-md">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

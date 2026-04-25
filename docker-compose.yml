@@ -10,7 +10,9 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      # [변경] 하단 volumes 정의와 일치하도록 명명된 볼륨(named volume) 사용 권장
+      # 기존: - ./mysql_data:/var/lib/mysql (호스트 경로)
+      - mariadb_data:/var/lib/mysql
     healthcheck:
       test: [ "CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MARIADB_ROOT_PASSWORD || exit 1" ]
       interval: 5s
@@ -31,7 +33,8 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - SPRING_PROFILES_ACTIVE=prod
     depends_on:
-      - db
+      db:
+        condition: service_healthy # [추가] DB가 완전히 준비된 후 백엔드 시작
 
   # 3. Frontend
   frontend:
@@ -58,12 +61,14 @@ services:
     depends_on:
       - frontend
       - backend
+      - portainer # [추가] Portainer 프록시를 위해 의존성 추가
 
   # 5. Portainer
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: always
+    # Nginx를 통해 접속하므로 호스트 포트는 주석 처리 유지 (보안상 좋음)
     # ports:
     #   - "9000:9000"
     volumes:
@@ -87,7 +92,8 @@ services:
     volumes:
       - ssh_config:/config
 
+# [수정] 서비스에서 사용하는 볼륨 정의 일치화
 volumes:
-  mariadb_data:
+  mariadb_data: # db 서비스에서 사용
   portainer_data:
   ssh_config:

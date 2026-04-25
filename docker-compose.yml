@@ -3,6 +3,7 @@ services:
   db:
     image: mariadb:latest
     container_name: mariadb-server
+    command: --lower_case_table_names=1
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}

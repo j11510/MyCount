@@ -47,22 +47,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // 1. CORS 설정 적용
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // 2. CSRF 비활성화 (Stateless API 서버이므로 필수)
                 .csrf(csrf -> csrf.disable())
+
+                // 3. 세션 사용 안 함 (JWT 방식)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // 4. 요청 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        // [중요] 최우선 허용: /api/token은 POST 요청이더라도 무조건 permitAll 되어야 함
                         .requestMatchers("/api/token/**", "/api/login/**", "/api/auth/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // CORS
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // HTTP Method based RBAC
+                        // [권한 순서 보장] 인증이 필요한 API들
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/**").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/**").hasRole("admin")
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/**").hasRole("admin")
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/**").hasRole("admin")
-                        .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/**").hasRole("admin")
+                        .requestMatchers("/api/**").hasRole("ADMIN") // 나머지 POST/PUT/DELETE는 ADMIN만
 
                         .anyRequest().authenticated())
+
+                // 5. JWT 필터 배치
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

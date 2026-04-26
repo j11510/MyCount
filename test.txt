@@ -1,6 +1,6 @@
 @echo off
-:: 한글 깨짐 방지 (ANSI 저장 필요)
-chcp 949 >nul
+:: Prevent character breaking (Standardize to ANSI/UTF-8)
+chcp 437 >nul
 title WSL2 Docker Final - Paul
 setlocal enabledelayedexpansion
 
@@ -10,7 +10,7 @@ echo ================================================== > %LOG_FILE%
 echo [START] Startup Script Execution: %date% %time% >> %LOG_FILE%
 echo ================================================== >> %LOG_FILE%
 
-:: [Config] 환경 변수 설정
+:: [Config] Environment Secrets
 set DB_PASSWORD=11111
 set SECRET_KEY=11111111111111111111111111111111
 set SSH_PASSWORD=12121212121212
@@ -18,23 +18,23 @@ set SSH_PASSWORD=12121212121212
 set DUCKDNS_DOMAIN=couuu
 set DUCKDNS_TOKEN=YOUR_DUCKDNS_TOKEN_HERE
 
-:: 1. 관리자 권한 확인
+:: 1. Check for Administrator Privileges
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     powershell -Command "Start-Process '%~0' -Verb RunAs"
     exit /b
 )
 
-echo [1/4] WSL2 초기화 및 네트워크 리셋 중...
+echo [1/4] Initializing WSL2 and Resetting Network...
 echo [1/4] Initializing WSL2 and Resetting Network... >> %LOG_FILE%
 wsl --shutdown >> %LOG_FILE% 2>&1
 netsh interface portproxy reset >> %LOG_FILE% 2>&1
 
-echo [2/4] 도커 서비스 시작 중...
+echo [2/4] Starting Docker Service...
 echo [2/4] Starting Docker Service... >> %LOG_FILE%
 wsl -u paul -e sudo service docker start >> %LOG_FILE% 2>&1
 
-echo 도커 상태 확인 중...
+echo Checking Docker status...
 set count=0
 :wait_docker
 timeout /t 2 /nobreak > nul
@@ -42,23 +42,23 @@ set /a count+=2
 wsl -u paul -e docker ps >nul 2>&1
 if %errorLevel% equ 0 goto docker_ready
 if %count% geq 40 goto docker_fail
-echo ... 대기 중 (%count%s)
+echo ... Waiting (%count%s)
 goto wait_docker
 
 :docker_ready
-echo [+] 도커가 정상적으로 실행되었습니다!
+echo [+] Docker is running successfully!
 
-echo [3/4] 포트 포워딩 구성 중 (Web, Admin, SSH, DB)...
-:: 로컬 MariaDB/MySQL 서비스 충돌 방지 (포트 3306)
-powershell -Command "if (Get-Service -Name 'MariaDB' -ErrorAction SilentlyContinue | where {$_.Status -eq 'Running'}) { Stop-Service -Name 'MariaDB' -Force; echo '[!] 포트 충돌 방지를 위해 로컬 MariaDB 서비스를 중지했습니다.' }"
-powershell -Command "if (Get-Service -Name 'MySQL' -ErrorAction SilentlyContinue | where {$_.Status -eq 'Running'}) { Stop-Service -Name 'MySQL' -Force; echo '[!] 포트 충돌 방지를 위해 로컬 MySQL 서비스를 중지했습니다.' }"
+echo [3/4] Configuring Port Forwarding (Web, Admin, SSH, DB)...
+:: Prevent port 3306 conflict by stopping local MariaDB/MySQL services
+powershell -Command "if (Get-Service -Name 'MariaDB' -ErrorAction SilentlyContinue | where {$_.Status -eq 'Running'}) { Stop-Service -Name 'MariaDB' -Force; echo '[!] Local MariaDB service stopped to avoid port 3306 conflict.' }"
+powershell -Command "if (Get-Service -Name 'MySQL' -ErrorAction SilentlyContinue | where {$_.Status -eq 'Running'}) { Stop-Service -Name 'MySQL' -Force; echo '[!] Local MySQL service stopped to avoid port 3306 conflict.' }"
 
-:: WSL IP 추출
+:: Extract WSL IP address
 for /f "usebackq tokens=1" %%i in (`wsl -e hostname -I`) do set WSL_IP=%%i
 set "WSL_IP=%WSL_IP: =%"
 
 if "%WSL_IP%"=="" (
-    echo [!] WSL IP 주소를 추출하지 못했습니다.
+    echo [!] Failed to extract WSL IP address.
     echo [!] Failed to extract WSL IP address. >> %LOG_FILE%
     pause
     exit /b
@@ -67,7 +67,7 @@ if "%WSL_IP%"=="" (
 echo [Target WSL IP: %WSL_IP%]
 echo [Target WSL IP: %WSL_IP%] >> %LOG_FILE%
 
-:: 포트 포워딩: 80, 443(Nginx), 8080(Backend), 9000/9443(Portainer), 2222(SSH), 3306(MariaDB)
+:: Port Forwarding: 80, 443(Nginx), 8080(Backend), 9000/9443(Portainer), 2222(SSH), 3306(MariaDB)
 netsh interface portproxy add v4tov4 listenport=80 listenaddress=0.0.0.0 connectport=80 connectaddress=%WSL_IP%
 netsh interface portproxy add v4tov4 listenport=443 listenaddress=0.0.0.0 connectport=443 connectaddress=%WSL_IP%
 netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=%WSL_IP%
@@ -76,47 +76,45 @@ netsh interface portproxy add v4tov4 listenport=9443 listenaddress=0.0.0.0 conne
 netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=2222 connectaddress=%WSL_IP%
 netsh interface portproxy add v4tov4 listenport=3306 listenaddress=0.0.0.0 connectport=3306 connectaddress=%WSL_IP%
 
-echo [3.5/4] DuckDNS IP 업데이트 중...
+echo [3.5/4] Updating DuckDNS IP...
 if not "%DUCKDNS_TOKEN%"=="YOUR_DUCKDNS_TOKEN_HERE" (
     powershell -Command "Invoke-RestMethod -Uri 'https://www.duckdns.org/update?domains=%DUCKDNS_DOMAIN%&token=%DUCKDNS_TOKEN%&verbose=true'"
 )
 
 echo.
-echo [윈도우 방화벽 규칙 설정 중...]
+echo [Configuring Windows Firewall Rules...]
 powershell -Command "if (!(Get-NetFirewallRule -DisplayName 'Allow Web 80' -ErrorAction SilentlyContinue)) { New-NetFirewallRule -DisplayName 'Allow Web 80' -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow }"
 powershell -Command "if (!(Get-NetFirewallRule -DisplayName 'Allow Secure Web 443' -ErrorAction SilentlyContinue)) { New-NetFirewallRule -DisplayName 'Allow Secure Web 443' -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow }"
 powershell -Command "if (!(Get-NetFirewallRule -DisplayName 'Allow Portainer 9443' -ErrorAction SilentlyContinue)) { New-NetFirewallRule -DisplayName 'Allow Portainer 9443' -Direction Inbound -LocalPort 9443 -Protocol TCP -Action Allow }"
 powershell -Command "if (!(Get-NetFirewallRule -DisplayName 'Allow SSH 2222' -ErrorAction SilentlyContinue)) { New-NetFirewallRule -DisplayName 'Allow SSH 2222' -Direction Inbound -LocalPort 2222 -Protocol TCP -Action Allow }"
 powershell -Command "if (!(Get-NetFirewallRule -DisplayName 'Allow MariaDB 3306' -ErrorAction SilentlyContinue)) { New-NetFirewallRule -DisplayName 'Allow MariaDB 3306' -Direction Inbound -LocalPort 3306 -Protocol TCP -Action Allow }"
 
-:: [4/5] 소스 경로 확인 (Paul님의 경로로 수정)
+:: [4/5] Application Source Path (Adjusted for Paul's environment)
 set APP_PATH=/home/paul/mycount/app
 
-echo [5/5] Docker Compose 컨테이너 빌드 및 실행 중...
+echo [5/5] Rebuilding and Restarting Docker Compose Containers...
 echo [5/5] Rebuilding and restarting Docker Compose containers... >> %LOG_FILE%
 
-:: 이전 로직 주석 처리: 각각 실행하던 방식을 한 줄의 명령어로 환경변수와 함께 전달
-:: wsl -u paul -e sh -c "cd %APP_PATH% && DB_PASSWORD=%DB_PASSWORD% SECRET_KEY=%SECRET_KEY% SSH_PASSWORD=%SSH_PASSWORD% docker compose down"
-
+:: Execute Docker Compose with environment variables in a single command chain
 wsl -u paul -e sh -c "export DB_PASSWORD=%DB_PASSWORD% SECRET_KEY=%SECRET_KEY% SSH_PASSWORD=%SSH_PASSWORD% && cd %APP_PATH% && docker compose down && docker compose up -d --build"
 
 if %errorLevel% neq 0 (
     echo.
-    echo [!] Docker compose 실행 실패. %LOG_FILE%을 확인하세요.
+    echo [!] Docker compose execution failed. Please check %LOG_FILE%
     pause
     exit /b
 )
 
 echo.
 echo ==================================================
-echo [SUCCESS] 모든 시스템이 정상 작동 중입니다!
-echo           로그 모니터링을 시작합니다... (Ctrl+C로 종료)
+echo [SUCCESS] All systems are up and running!
+echo           Starting Log Monitor... (Press Ctrl+C to exit)
 echo ==================================================
 wsl -u paul -e sh -c "export DB_PASSWORD=%DB_PASSWORD% SECRET_KEY=%SECRET_KEY% SSH_PASSWORD=%SSH_PASSWORD% && cd %APP_PATH% && docker compose logs -f --tail=50"
 pause
 exit
 
 :docker_fail
-echo [!] 도커 실행에 실패했습니다. WSL에서 'sudo service docker status'를 확인하세요.
+echo [!] Docker failed to start. Please check 'sudo service docker status' in WSL.
 pause
 exit

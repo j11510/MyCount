@@ -65,7 +65,7 @@ public class SecurityConfig {
 
                         // [권한 순서 보장] 인증이 필요한 API들
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/**").authenticated()
-                        .requestMatchers("/api/**").hasRole("ADMIN") // 나머지 POST/PUT/DELETE는 ADMIN만
+                        .requestMatchers("/api/**").hasRole("admin") // 나머지 POST/PUT/DELETE는 admin만
 
                         .anyRequest().authenticated())
 
